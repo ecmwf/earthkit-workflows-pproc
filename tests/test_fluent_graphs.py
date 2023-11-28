@@ -1,8 +1,8 @@
 import pytest
 import os
 
-from ppgraph import pyvis
 from cascade.cascade import Cascade
+from cascade.graph import pyvis
 
 from helpers.mock import mock_args, mock_cluster_args
 
