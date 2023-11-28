@@ -1,8 +1,8 @@
 import os
 import random
 
-from ppgraph import Node, Sink, Graph, Transformer
 from cascade.cascade import Cascade
+from cascade.graph import Node, Sink, Graph, Transformer
 from cascade.graphs import Task, TaskGraph, ContextGraph
 from cascade.scheduler import AnnealingScheduler
 

@@ -1,7 +1,7 @@
 import numpy as np
 import xarray as xr
 
-from ppgraph import Graph, deduplicate_nodes
+from cascade.graph import Graph, deduplicate_nodes
 from cascade.fluent import Node, Payload
 from cascade.fluent import custom_hash
 
