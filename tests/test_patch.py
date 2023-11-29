@@ -1,4 +1,5 @@
-import jax.numpy as jnp
+import xarray as xr
+import numpy as np
 import pytest
 
 from meteokit import extreme
@@ -7,8 +8,9 @@ from ppcascade.patch import PatchModule
 
 
 def test_patch_extreme():
-    a = jnp.ones((2, 3))
-    with PatchModule(extreme, "numpy", jnp):
-        with pytest.raises(Exception):
+    a = xr.DataArray(np.arange(6).reshape(2, 3), dims=["x", "y"])
+    with pytest.raises(AttributeError) as err:
+        with PatchModule(extreme, "numpy", xr):
             extreme.efi(a, a, 0.0001)
-    extreme.efi(a, a, 0.0001)
+
+    assert str(err.value) == "module 'xarray' has no attribute 'logical_or'"

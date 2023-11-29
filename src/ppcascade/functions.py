@@ -10,10 +10,10 @@ from pproc.common.resources import ResourceMeter
 from pproc import clustereps
 from pproc.clustereps.utils import normalise_angles
 from pproc.clustereps.io import read_steps_grib
-from cascade.patch import PatchModule
 
 from .grib import extreme_grib_headers, threshold_grib_headers
 from .wrappers.metadata import GribBufferMetaData
+from .patch import PatchModule
 
 
 def concatenate(*arrays: list[NumpyFieldList]) -> NumpyFieldList:

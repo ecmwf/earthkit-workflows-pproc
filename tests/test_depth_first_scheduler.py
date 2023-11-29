@@ -3,7 +3,8 @@ import random
 
 from cascade.cascade import Cascade
 from cascade.graph import Node, Sink, Graph, Transformer
-from cascade.graphs import Task, TaskGraph, ContextGraph
+from cascade.taskgraph import Task, TaskGraph
+from cascade.contextgraph import ContextGraph
 from cascade.scheduler import AnnealingScheduler
 
 from helpers.mock import mock_args
