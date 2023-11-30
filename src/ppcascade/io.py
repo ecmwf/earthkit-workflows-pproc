@@ -13,7 +13,7 @@ from pproc.common.io import (
     FileTarget,
     FileSetTarget,
 )
-from pproc.common import ResourceMeter
+from pproc.common.resources import ResourceMeter, metered, pretty_bytes
 from pproc.clustereps.__main__ import write_cluster_attr_grib
 from pproc.clustereps.cluster import get_output_keys
 from pproc.common.io import split_location
@@ -117,8 +117,12 @@ def file_retrieve(path: str, request: dict) -> Source:
 
 def retrieve(request: dict | list[dict], **kwargs):
     if isinstance(request, dict):
-        return retrieve_single_source(request, **kwargs)
-    return retrieve_multi_sources(request, **kwargs)
+        func = retrieve_single_source
+    else:
+        func = retrieve_multi_sources
+    meter, result = metered(f"RETRIEVE {request}", None, True)(func)(request, **kwargs)
+    print(f"{str(meter)}, size: {pretty_bytes(result.values.nbytes)}")
+    return result
 
 
 def retrieve_multi_sources(requests: list[dict], **kwargs) -> NumpyFieldList:
@@ -138,16 +142,15 @@ def retrieve_single_source(request: dict, **kwargs) -> NumpyFieldList:
 
     req = request.copy()
     source = req.pop("source")
-    with ResourceMeter(f"RETRIEVE source {source}, request {request}"):
-        if source == "fdb":
-            ret_sources = fdb_retrieve(req, **kwargs)
-        elif source == "mars":
-            ret_sources = mars_retrieve(req)
-        elif source == "fileset":
-            path = req.pop("location")
-            ret_sources = file_retrieve(path, req)
-        else:
-            raise NotImplementedError("Source {source} not supported.")
+    if source == "fdb":
+        ret_sources = fdb_retrieve(req, **kwargs)
+    elif source == "mars":
+        ret_sources = mars_retrieve(req)
+    elif source == "fileset":
+        path = req.pop("location")
+        ret_sources = file_retrieve(path, req)
+    else:
+        raise NotImplementedError("Source {source} not supported.")
     assert (
         len(ret_sources) > 0
     ), f"No data retrieved from {source} for request {request}"
@@ -175,10 +178,10 @@ def write(loc: str, data: NumpyFieldList, grib_sets: dict):
 
     for missing_key in set_missing:
         template._handle.set_missing(missing_key)
-    with ResourceMeter(
-        f"WRITE target {loc}, size {sys.getsizeof(data[0].values)} bytes"
-    ):
-        write_grib(target, template._handle, data[0].values)
+    meter, _ = metered(f"WRITE {loc}", None, True)(write_grib)(
+        target, template._handle, data[0].values
+    )
+    print(f"{str(meter)}, size: {pretty_bytes(data[0].values.nbytes)}")
 
 
 def cluster_write(
@@ -194,7 +197,7 @@ def cluster_write(
     ]
 
     keys, steps = get_output_keys(config, grib_template)
-    with ResourceMeter(f"Write {scenario} output"):
+    with ResourceMeter(f"WRITE {scenario}"):
         ## Write anomalies and cluster scenarios
         dest, adest = cluster_dests
         target = target_from_location(dest)
