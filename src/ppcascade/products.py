@@ -35,9 +35,7 @@ def _read(
                 name=f"retrieve@{name}:{custom_hash(str(payload))}",
             )
         if len(request.dims) == 0:
-            new_action = SingleAction(
-                payload=None, previous=None, node=xr.DataArray(nodes[()])
-            )
+            new_action = SingleAction(None, node=xr.DataArray(nodes[()]))
         else:
             new_action = MultiAction(
                 None,

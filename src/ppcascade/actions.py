@@ -30,17 +30,17 @@ class SingleAction(BaseSingleAction):
         # Join with climatology and compute efi control
         payload = Payload(
             functions.efi,
-            ("input1", "input0", eps, num_steps),
+            (Node.input_name(1), Node.input_name(0), eps, num_steps),
             {"control": True},
         )
         ret = self.join(climatology, "datatype").reduce(payload)
         return ret.write(target_efi, grib_sets)
 
     def cluster(self, config, ncomp_file, indexes, deterministic):
-        return self.then(
+        return self.map(
             Payload(
                 functions.cluster,
-                (config, "input0", ncomp_file, indexes, deterministic),
+                (config, Node.input_name(0), ncomp_file, indexes, deterministic),
             )
         )
 
@@ -54,14 +54,16 @@ class SingleAction(BaseSingleAction):
                 else:
                     assert values.data.ndim == 1
                     grib_sets[name] = values.data[0]
-            payload = Payload(write_grib, (target, "input0", grib_sets))
+            payload = Payload(write_grib, (target, Node.input_name(0), grib_sets))
             self.sinks.append(Node(payload, self.node()))
         return self
 
 
 class MultiAction(BaseMultiAction):
-    def to_single(self, payload: Payload, node: Node = None):
-        return SingleAction(payload, self, node)
+    def to_single(self, payload_or_node: Payload | Node):
+        if isinstance(payload_or_node, Payload):
+            return SingleAction.from_payload(self, payload_or_node)
+        return SingleAction(self, payload_or_node)
 
     def concatenate(self, key: str):
         return self.reduce(Payload(functions.concatenate), key)
@@ -83,27 +85,45 @@ class MultiAction(BaseMultiAction):
 
     def diff(self, key: str = "", extract_keys: tuple = ()):
         return self.reduce(
-            Payload(functions.subtract, ("input1", "input0", extract_keys)), key
+            Payload(
+                functions.subtract,
+                (Node.input_name(1), Node.input_name(0), extract_keys),
+            ),
+            key,
         )
 
     def subtract(self, key: str = "", extract_keys: tuple = ()):
         return self.reduce(
-            Payload(functions.subtract, ("input0", "input1", extract_keys)), key
+            Payload(
+                functions.subtract,
+                (Node.input_name(0), Node.input_name(1), extract_keys),
+            ),
+            key,
         )
 
     def add(self, key: str = "", extract_keys: tuple = ()):
         return self.reduce(
-            Payload(functions.add, ("input0", "input1", extract_keys)), key
+            Payload(
+                functions.add, (Node.input_name(0), Node.input_name(1), extract_keys)
+            ),
+            key,
         )
 
     def divide(self, key: str = "", extract_keys: tuple = ()):
         return self.reduce(
-            Payload(functions.divide, ("input0", "input1", extract_keys)), key
+            Payload(
+                functions.divide, (Node.input_name(0), Node.input_name(1), extract_keys)
+            ),
+            key,
         )
 
     def multiply(self, key: str = "", extract_keys: tuple = ()):
         return self.reduce(
-            Payload(functions.multiply, ("input0", "input1", extract_keys)), key
+            Payload(
+                functions.multiply,
+                (Node.input_name(0), Node.input_name(1), extract_keys),
+            ),
+            key,
         )
 
     def extreme(
@@ -120,11 +140,15 @@ class MultiAction(BaseMultiAction):
         # with climatology and reduce efi/sot
         def _extreme(action, number):
             if number == 0:
-                payload = Payload(functions.efi, ("input1", "input0", eps, num_steps))
+                payload = Payload(
+                    functions.efi,
+                    (Node.input_name(1), Node.input_name(0), eps, num_steps),
+                )
                 target = target_efi
             else:
                 payload = Payload(
-                    functions.sot, ("input1", "input0", number, eps, num_steps)
+                    functions.sot,
+                    (Node.input_name(1), Node.input_name(0), number, eps, num_steps),
                 )
                 target = target_sot
             new_extreme = action.reduce(payload)
@@ -155,11 +179,11 @@ class MultiAction(BaseMultiAction):
         def _threshold_prob(action, threshold):
             payload = Payload(
                 functions.threshold,
-                (threshold, "input0", grib_sets.get("edition", 1)),
+                (threshold, Node.input_name(0), grib_sets.get("edition", 1)),
             )
             new_threshold_action = (
-                action.foreach(payload)
-                .foreach(
+                action.map(payload)
+                .map(
                     Payload(
                         lambda x: FieldList.from_numpy(x.values * 100, x.metadata())
                     )
@@ -192,11 +216,11 @@ class MultiAction(BaseMultiAction):
 
     def quantiles(self, n: int = 100, target: str = "null:", grib_sets: dict = {}):
         def _quantiles(action, quantile):
-            payload = Payload(functions.quantiles, ("input0", quantile))
+            payload = Payload(functions.quantiles, (Node.input_name(0), quantile))
             if isinstance(action, BaseSingleAction):
-                new_quantile = action.then(payload)
+                new_quantile = action.map(payload)
             else:
-                new_quantile = action.foreach(payload)
+                new_quantile = action.map(payload)
             new_quantile._add_dimension("perturbationNumber", quantile)
             return new_quantile
 
@@ -208,7 +232,7 @@ class MultiAction(BaseMultiAction):
 
     def wind_speed(self, vod2uv: bool, target: str = "null:", grib_sets={}):
         if vod2uv:
-            ret = self.foreach(Payload(functions.norm, ("input0",)))
+            ret = self.map(Payload(functions.norm, (Node.input_name(0),)))
         else:
             ret = self.param_operation("norm")
         return ret.write(target, grib_sets)
@@ -236,13 +260,17 @@ class MultiAction(BaseMultiAction):
         if mask is not None:
             raise NotImplementedError()
         return self.reduce(
-            Payload(functions.pca, (config, "input0", "input1", mask, target))
+            Payload(
+                functions.pca,
+                (config, Node.input_name(0), Node.input_name(1), mask, target),
+            )
         )
 
     def attribution(self, config, targets):
         def _attribution(action, scenario):
             payload = Payload(
-                functions.attribution, (config, scenario, "input0", "input1")
+                functions.attribution,
+                (config, scenario, Node.input_name(0), Node.input_name(1)),
             )
             attr = action.reduce(payload)
             attr._add_dimension("scenario", scenario)
@@ -250,19 +278,19 @@ class MultiAction(BaseMultiAction):
 
         return self.transform(
             _attribution, ["centroids", "representatives"], "scenario"
-        ).foreach(
+        ).map(
             np.asarray(
                 [
                     Payload(
                         cluster_write,
-                        (config, "centroids", "input0", targets["centroids"]),
+                        (config, "centroids", Node.input_name(0), targets["centroids"]),
                     ),
                     Payload(
                         cluster_write,
                         (
                             config,
                             "representatives",
-                            "input0",
+                            Node.input_name(0),
                             targets["representatives"],
                         ),
                     ),
@@ -285,6 +313,9 @@ class MultiAction(BaseMultiAction):
                 grib_sets.update(self.nodes.attrs)
                 grib_sets.update(node_coords)
                 self.sinks.append(
-                    Node(Payload(write_grib, (target, "input0", grib_sets)), [node])
+                    Node(
+                        Payload(write_grib, (target, Node.input_name(0), grib_sets)),
+                        [node],
+                    )
                 )
         return self
