@@ -2,10 +2,9 @@ import numpy as np
 import xarray as xr
 
 from cascade.graph import Graph, deduplicate_nodes
-from cascade.fluent import Node, Payload
-from cascade.fluent import custom_hash
+from cascade.fluent import Payload
 
-from .actions import SingleAction, MultiAction
+from .fluent import PProcFluent
 from .io import retrieve
 from .graph_config import (
     Config,
@@ -23,28 +22,18 @@ def _read(
 ):
     all_actions = None
     for request in requests:
-        nodes = np.empty(tuple(request.dims.values()), dtype=object)
-        for indices, new_request, name in request.expand():
-            payload = Payload(
+        payloads = np.empty(tuple(request.dims.values()), dtype=object)
+        for indices, new_request in request.expand():
+            payloads[indices] = Payload(
                 retrieve,
                 (new_request,),
                 kwargs,
             )
-            nodes[indices] = Node(
-                payload=payload,
-                name=f"retrieve@{name}:{custom_hash(str(payload))}",
-            )
-        if len(request.dims) == 0:
-            new_action = SingleAction(None, node=xr.DataArray(nodes[()]))
-        else:
-            new_action = MultiAction(
-                None,
-                xr.DataArray(
-                    nodes,
-                    dims=request.dims.keys(),
-                    coords={key: list(request[key]) for key in request.dims.keys()},
-                ),
-            )
+        new_action = PProcFluent.source(
+            payloads,
+            dims={key: list(request[key]) for key in request.dims.keys()},
+            name="retrieve",
+        )
 
         if all_actions is None:
             all_actions = new_action

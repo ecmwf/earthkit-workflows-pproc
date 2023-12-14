@@ -6,13 +6,15 @@ from earthkit.data import FieldList
 from cascade.fluent import Action, Node, Payload
 from cascade.fluent import SingleAction as BaseSingleAction
 from cascade.fluent import MultiAction as BaseMultiAction
+from cascade.fluent import Fluent
+
 
 from .io import cluster_write
 from .io import write as write_grib
 from .graph_config import (
     Window,
 )
-from . import functions
+from .fieldlist_backend import NumpyFieldListBackend
 
 
 class SingleAction(BaseSingleAction):
@@ -29,7 +31,7 @@ class SingleAction(BaseSingleAction):
     ):
         # Join with climatology and compute efi control
         payload = Payload(
-            functions.efi,
+            NumpyFieldListBackend.efi,
             (Node.input_name(1), Node.input_name(0), eps, num_steps),
             {"control": True},
         )
@@ -39,7 +41,7 @@ class SingleAction(BaseSingleAction):
     def cluster(self, config, ncomp_file, indexes, deterministic):
         return self.map(
             Payload(
-                functions.cluster,
+                NumpyFieldListBackend.cluster,
                 (config, Node.input_name(0), ncomp_file, indexes, deterministic),
             )
         )
@@ -65,66 +67,14 @@ class MultiAction(BaseMultiAction):
             return SingleAction.from_payload(self, payload_or_node)
         return SingleAction(self, payload_or_node)
 
-    def concatenate(self, key: str):
-        return self.reduce(Payload(functions.concatenate), key)
-
-    def mean(self, key: str = ""):
-        return self.reduce(Payload(functions.mean), key)
-
-    def std(self, key: str = ""):
-        return self.reduce(Payload(functions.std), key)
-
-    def maximum(self, key: str = ""):
-        return self.reduce(Payload(functions.maximum), key)
-
-    def minimum(self, key: str = ""):
-        return self.reduce(Payload(functions.minimum), key)
+    def diff(self, key: str = "", **method_kwargs):
+        return self.reduce(
+            Payload(NumpyFieldListBackend.diff, kwargs=method_kwargs),
+            key,
+        )
 
     def norm(self, key: str = ""):
-        return self.reduce(Payload(functions.norm), key)
-
-    def diff(self, key: str = "", extract_keys: tuple = ()):
-        return self.reduce(
-            Payload(
-                functions.subtract,
-                (Node.input_name(1), Node.input_name(0), extract_keys),
-            ),
-            key,
-        )
-
-    def subtract(self, key: str = "", extract_keys: tuple = ()):
-        return self.reduce(
-            Payload(
-                functions.subtract,
-                (Node.input_name(0), Node.input_name(1), extract_keys),
-            ),
-            key,
-        )
-
-    def add(self, key: str = "", extract_keys: tuple = ()):
-        return self.reduce(
-            Payload(
-                functions.add, (Node.input_name(0), Node.input_name(1), extract_keys)
-            ),
-            key,
-        )
-
-    def divide(self, key: str = "", extract_keys: tuple = ()):
-        return self.reduce(
-            Payload(
-                functions.divide, (Node.input_name(0), Node.input_name(1), extract_keys)
-            ),
-            key,
-        )
-
-    def multiply(self, key: str = "", extract_keys: tuple = ()):
-        return self.reduce(
-            Payload(
-                functions.multiply,
-                (Node.input_name(0), Node.input_name(1), extract_keys),
-            ),
-            key,
-        )
+        return self.reduce(Payload(NumpyFieldListBackend.norm), key)
 
     def extreme(
         self,
@@ -141,13 +91,13 @@ class MultiAction(BaseMultiAction):
         def _extreme(action, number):
             if number == 0:
                 payload = Payload(
-                    functions.efi,
+                    NumpyFieldListBackend.efi,
                     (Node.input_name(1), Node.input_name(0), eps, num_steps),
                 )
                 target = target_efi
             else:
                 payload = Payload(
-                    functions.sot,
+                    NumpyFieldListBackend.sot,
                     (Node.input_name(1), Node.input_name(0), number, eps, num_steps),
                 )
                 target = target_sot
@@ -178,7 +128,7 @@ class MultiAction(BaseMultiAction):
     ):
         def _threshold_prob(action, threshold):
             payload = Payload(
-                functions.threshold,
+                NumpyFieldListBackend.threshold,
                 (threshold, Node.input_name(0), grib_sets.get("edition", 1)),
             )
             new_threshold_action = (
@@ -216,7 +166,9 @@ class MultiAction(BaseMultiAction):
 
     def quantiles(self, n: int = 100, target: str = "null:", grib_sets: dict = {}):
         def _quantiles(action, quantile):
-            payload = Payload(functions.quantiles, (Node.input_name(0), quantile))
+            payload = Payload(
+                NumpyFieldListBackend.quantiles, (Node.input_name(0), quantile)
+            )
             if isinstance(action, BaseSingleAction):
                 new_quantile = action.map(payload)
             else:
@@ -232,19 +184,21 @@ class MultiAction(BaseMultiAction):
 
     def wind_speed(self, vod2uv: bool, target: str = "null:", grib_sets={}):
         if vod2uv:
-            ret = self.map(Payload(functions.norm, (Node.input_name(0),)))
+            ret = self.map(Payload(NumpyFieldListBackend.norm, (Node.input_name(0),)))
         else:
             ret = self.param_operation("norm")
         return ret.write(target, grib_sets)
 
-    def param_operation(self, operation: str):
+    def param_operation(self, operation: str | Payload):
         if operation is None:
             return self
         if isinstance(operation, str):
             return getattr(self, operation)("param")
-        return self.reduce(Payload(operation), "param")
+        return self.reduce(operation, "param")
 
-    def window_operation(self, window, target: str = "null:", grib_sets: dict = {}):
+    def window_operation(
+        self, window: Window, target: str = "null:", grib_sets: dict = {}
+    ):
         if window.operation is None:
             self._squeeze_dimension("step")
             ret = self
@@ -261,7 +215,7 @@ class MultiAction(BaseMultiAction):
             raise NotImplementedError()
         return self.reduce(
             Payload(
-                functions.pca,
+                NumpyFieldListBackend.pca,
                 (config, Node.input_name(0), Node.input_name(1), mask, target),
             )
         )
@@ -269,7 +223,7 @@ class MultiAction(BaseMultiAction):
     def attribution(self, config, targets):
         def _attribution(action, scenario):
             payload = Payload(
-                functions.attribution,
+                NumpyFieldListBackend.attribution,
                 (config, scenario, Node.input_name(0), Node.input_name(1)),
             )
             attr = action.reduce(payload)
@@ -319,3 +273,8 @@ class MultiAction(BaseMultiAction):
                     )
                 )
         return self
+
+
+class PProcFluent(Fluent):
+    single_action: type = SingleAction
+    multi_action: type = MultiAction

@@ -4,11 +4,13 @@ import bisect
 from datetime import timedelta
 import copy
 import numpy as np
+import functools
 
 from pproc.common.config import Config as BaseConfig
 from pproc.clustereps.config import FullClusterConfig
+from cascade.fluent import Payload
 
-from . import functions
+from .fieldlist_backend import NumpyFieldListBackend
 from .io import _source_from_location
 
 
@@ -80,16 +82,14 @@ class Request:
         for params in itertools.product(*[self.request[x] for x in self.dims.keys()]):
             new_request = self.request.copy()
             indices = []
-            name = [f"type={self.request['type']}"]
             for index, expand_param in enumerate(self.dims.keys()):
                 new_request[expand_param] = params[index]
-                name.append(f"{expand_param}={params[index]}")
                 indices.append(list(self.request[expand_param]).index(params[index]))
 
             # Remove fake dims from request
             for dim in self.fake_dims:
                 new_request.pop(dim)
-            yield tuple(indices), new_request, ",".join(name)
+            yield tuple(indices), new_request
 
 
 class MultiSourceRequest(Request):
@@ -132,17 +132,15 @@ class MultiSourceRequest(Request):
     def expand(self):
         for params in itertools.product(*[self.request[x] for x in self.dims.keys()]):
             indices = []
-            name = [f"type={self.request['type']}"]
             new_requests = copy.deepcopy(self.requests)
             for index, expand_param in enumerate(self.dims.keys()):
                 [x.__setitem__(expand_param, params[index]) for x in new_requests]
-                name.append(f"{expand_param}={params[index]}")
                 indices.append(list(self.request[expand_param]).index(params[index]))
 
             # Remove fake dims from request
             for dim in self.fake_dims:
                 [x.pop(dim) for x in new_requests]
-            yield tuple(indices), new_requests, ",".join(name)
+            yield tuple(indices), new_requests
 
 
 class Config(BaseConfig):
@@ -207,16 +205,13 @@ class ParamConfig:
     def _generate_param_operation(cls, param_config):
         if "input_filter_operation" in param_config:
             filter_configs = param_config.pop("input_filter_operation")
-            return (
-                functions.filter,
-                (
-                    filter_configs["comparison"],
-                    float(filter_configs["threshold"]),
-                    "input0",
-                    "input1",
-                    float(filter_configs.get("replacement", 0)),
-                ),
+            partial_filter = functools.partial(
+                NumpyFieldListBackend.filter,
+                filter_configs["comparison"],
+                float(filter_configs["threshold"]),
+                replacement=float(filter_configs.get("replacement", 0)),
             )
+            return Payload(partial_filter)
         return param_config.pop("input_combine_operation", None)
 
     def get_target(self, target: str) -> str:
