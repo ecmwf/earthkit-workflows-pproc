@@ -1,13 +1,11 @@
 out_keys:
-  mars.expver: 9078
   type: ep
   localDefinitionNumber: 5
   bitsPerValue: 8
 members: 5
 parameters:
-  t850:
-    targets: 
-      out_prob: "fdb:"
+  t850_131022:
+    target: "fdb:"
     steps:
       - interval: 12
         start_step: 120
@@ -16,52 +14,13 @@ parameters:
       - periods:
           - range: [120, 120]
           - range: [168, 168]
-        thresholds:
-          - out_paramid: 131022
-            comparison: "<"
-            value: -8
-          - out_paramid: 131023
-            comparison: "<"
-            value: -4
         grib_set:
           bitsPerValue: 24
-      - periods:
-          - range: [120, 168]
-        window_operation: 'mean'
-        include_start_step: true
-        thresholds:
-          - out_paramid: 131020
-            comparison: "<"
-            value: -2
-          - out_paramid: 131021
-            comparison: ">="
-            value: 2
-        grib_set:
-          bitsPerValue: 24
-      - std_anomaly: True
-        periods:
-          - range: [120, 120]
-          - range: [132, 132]
-          - range: [168, 168]
-        thresholds:
-          - out_paramid: 133093
-            comparison: '>'
-            value: 1
-          - out_paramid: 133094
-            comparison: '>'
-            value: 1.5
-        grib_set:
-          localDefinitionNumber: 30
-          bitsPerValue: 24
-          edition: 2
-          typeOfGeneratingProcess: 5
-          paramId: 0
-          timeIncrement: 12
-          indicatorOfUnitForTimeIncrement: 1
-          typeOfStatisticalProcessing: 10
-          packingType: "grid_ccsds"
-          scaleFactorOfUpperLimit: 'MISSING'
-          scaledValueOfUpperLimit: 'MISSING'
+          paramId: 131022
+    ensemble:
+      operation: threshold_prob
+      comparison: "<"
+      value: -8
     defs:
       base_keys: &base_keys
         class: 'od'
@@ -77,7 +36,92 @@ parameters:
         matrix-loader: file-io
     sources:
       fdb:
-        ens:
+        fc:
+          - <<: *base_keys
+            stream: 'enfo'
+            type: cf
+            date: 20230914
+            time: 12
+            interpolate: *base_interp
+          - <<: *base_keys
+            stream: 'enfo'
+            type: pf 
+            date: 20230914
+            time: 12
+            interpolate: *base_interp
+        clim:
+          <<: *base_keys
+          stream: 'efhs'
+          type: [em, es]
+          date: 20230914
+          time: 00
+          interpolate: *base_interp
+          step:
+            120: 132
+            168: 180
+  t850_131023:
+    target: "fdb:"
+    steps:
+      - interval: 12
+        start_step: 120
+        end_step: 168 
+    windows:
+      - periods:
+          - range: [120, 120]
+          - range: [168, 168]
+        grib_set:
+          bitsPerValue: 24
+          paramId: 131023
+    ensemble:
+      operation: threshold_prob
+      comparison: "<"
+      value: 4
+    sources:
+      fdb:
+        fc:
+          - <<: *base_keys
+            stream: 'enfo'
+            type: cf
+            date: 20230914
+            time: 12
+            interpolate: *base_interp
+          - <<: *base_keys
+            stream: 'enfo'
+            type: pf 
+            date: 20230914
+            time: 12
+            interpolate: *base_interp
+        clim:
+          <<: *base_keys
+          stream: 'efhs'
+          type: [em, es]
+          date: 20230914
+          time: 00
+          interpolate: *base_interp
+          step:
+            120: 132
+            168: 180
+  t850_131020:
+    target: "fdb:"
+    steps:
+      - interval: 12
+        start_step: 120
+        end_step: 168 
+    windows:
+      - periods:
+          - range: [120, 168]
+        window_operation: 'mean'
+        include_start_step: true
+        grib_set:
+          bitsPerValue: 24
+          paramId: 131020
+    ensemble:
+      operation: threshold_prob
+      comparison: "<"
+      value: -2
+    sources:
+      fdb:
+        fc:
           - <<: *base_keys
             stream: 'enfo'
             type: cf
@@ -103,9 +147,161 @@ parameters:
             144: 156
             156: 168
             168: 180
-            180: 192
-            192: 204
-            204: 216
-            216: 228
-            228: 240
-            240: 252
+  t850_131021:
+    target: "fdb:"
+    steps:
+      - interval: 12
+        start_step: 120
+        end_step: 168 
+    windows:
+      - periods:
+          - range: [120, 168]
+        window_operation: 'mean'
+        include_start_step: true
+        grib_set:
+          bitsPerValue: 24
+          paramId: 131021
+    ensemble:
+      operation: threshold_prob
+      comparison: ">="
+      value: 2
+    sources:
+      fdb:
+        fc:
+          - <<: *base_keys
+            stream: 'enfo'
+            type: cf
+            date: 20230914
+            time: 12
+            interpolate: *base_interp
+          - <<: *base_keys
+            stream: 'enfo'
+            type: pf 
+            date: 20230914
+            time: 12
+            interpolate: *base_interp
+        clim:
+          <<: *base_keys
+          stream: 'efhs'
+          type: [em, es]
+          date: 20230914
+          time: 00
+          interpolate: *base_interp
+          step:
+            120: 132
+            132: 144
+            144: 156
+            156: 168
+            168: 180
+  t850_133093:
+    target: "fdb:"
+    steps:
+      - interval: 12
+        start_step: 120
+        end_step: 168 
+    windows:
+      - periods:
+          - range: [120, 120]
+          - range: [132, 132]
+          - range: [168, 168]
+        std_anomaly: true
+        grib_set:
+          localDefinitionNumber: 30
+          bitsPerValue: 24
+          edition: 2
+          typeOfGeneratingProcess: 5
+          paramId: 133093
+          timeIncrement: 12
+          indicatorOfUnitForTimeIncrement: 1
+          typeOfStatisticalProcessing: 10
+          packingType: "grid_ccsds"
+          scaleFactorOfUpperLimit: 'MISSING'
+          scaledValueOfUpperLimit: 'MISSING'
+    ensemble:
+      operation: threshold_prob
+      comparison: ">"
+      value: 1
+    sources:
+      fdb:
+        fc:
+          - <<: *base_keys
+            stream: 'enfo'
+            type: cf
+            date: 20230914
+            time: 12
+            interpolate: *base_interp
+          - <<: *base_keys
+            stream: 'enfo'
+            type: pf 
+            date: 20230914
+            time: 12
+            interpolate: *base_interp
+        clim:
+          <<: *base_keys
+          stream: 'efhs'
+          type: [em, es]
+          date: 20230914
+          time: 00
+          interpolate: *base_interp
+          step:
+            120: 132
+            132: 144
+            144: 156
+            156: 168
+            168: 180
+  t850_133094:
+    target: "fdb:"
+    steps:
+      - interval: 12
+        start_step: 120
+        end_step: 168 
+    windows:
+      - periods:
+          - range: [120, 120]
+          - range: [132, 132]
+          - range: [168, 168]
+        std_anomaly: true
+        grib_set:
+          localDefinitionNumber: 30
+          bitsPerValue: 24
+          edition: 2
+          typeOfGeneratingProcess: 5
+          paramId: 133094
+          timeIncrement: 12
+          indicatorOfUnitForTimeIncrement: 1
+          typeOfStatisticalProcessing: 10
+          packingType: "grid_ccsds"
+          scaleFactorOfUpperLimit: 'MISSING'
+          scaledValueOfUpperLimit: 'MISSING'
+    ensemble:
+      operation: threshold_prob
+      comparison: ">"
+      value: 1.5
+    sources:
+      fdb:
+        fc:
+          - <<: *base_keys
+            stream: 'enfo'
+            type: cf
+            date: 20230914
+            time: 12
+            interpolate: *base_interp
+          - <<: *base_keys
+            stream: 'enfo'
+            type: pf 
+            date: 20230914
+            time: 12
+            interpolate: *base_interp
+        clim:
+          <<: *base_keys
+          stream: 'efhs'
+          type: [em, es]
+          date: 20230914
+          time: 00
+          interpolate: *base_interp
+          step:
+            120: 132
+            132: 144
+            144: 156
+            156: 168
+            168: 180

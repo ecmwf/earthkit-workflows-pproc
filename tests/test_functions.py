@@ -86,8 +86,8 @@ def test_two_arg(func):
     ],
 )
 def test_threshold(comparison):
-    config = {"comparison": comparison, "value": 2, "out_paramid": 120}
-    NumpyFieldListBackend.threshold(config, random_fieldlist(1, 5))
+    config = {"comparison": comparison, "value": 2}
+    NumpyFieldListBackend.threshold(random_fieldlist(1, 5), **config)
 
 
 def test_extreme():
@@ -123,7 +123,7 @@ def test_quantiles():
 
 def test_filter():
     arr = [random_fieldlist(1, 5) for _ in range(2)]
-    NumpyFieldListBackend.filter("<", 2, arr[0], arr[1], replacement=0)
+    NumpyFieldListBackend.filter(arr[0], arr[1], "<", 2, replacement=0)
 
 
 def test_concat():

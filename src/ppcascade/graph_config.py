@@ -4,13 +4,10 @@ import bisect
 from datetime import timedelta
 import copy
 import numpy as np
-import functools
 
 from pproc.common.config import Config as BaseConfig
 from pproc.clustereps.config import FullClusterConfig
-from cascade.fluent import Payload
 
-from .fieldlist_backend import NumpyFieldListBackend
 from .io import _source_from_location
 
 
@@ -164,8 +161,15 @@ class ParamConfig:
         self.sources = param_options.pop("sources")
         self.members = members
         self.windows = self._generate_windows(param_options.pop("windows"))
-        self.param_operation = self._generate_param_operation(param_options)
-        self.targets = param_options.pop("targets")
+        self.param = {
+            "operation": param_options.get("param", {}).pop("operation", None),
+            "kwargs": param_options.get("param", {}),
+        }
+        self.ensemble = {
+            "operation": param_options.get("ensemble", {}).pop("operation", None),
+            "kwargs": param_options.get("ensemble", {}),
+        }
+        self.target = param_options.pop("target")
         self.out_keys = out_keys.copy()
         self.in_keys = in_keys.copy()
         self.options = param_options
@@ -200,22 +204,6 @@ class ParamConfig:
                     Window(window["range"], operation, include_init, window_options)
                 )
         return windows
-
-    @classmethod
-    def _generate_param_operation(cls, param_config):
-        if "input_filter_operation" in param_config:
-            filter_configs = param_config.pop("input_filter_operation")
-            partial_filter = functools.partial(
-                NumpyFieldListBackend.filter,
-                filter_configs["comparison"],
-                float(filter_configs["threshold"]),
-                replacement=float(filter_configs.get("replacement", 0)),
-            )
-            return Payload(partial_filter)
-        return param_config.pop("input_combine_operation", None)
-
-    def get_target(self, target: str) -> str:
-        return self.targets.get(target, "null:")
 
     def _request_steps(self, window):
         if len(self.steps) == 0:
@@ -260,14 +248,15 @@ class ParamConfig:
 
 
 class WindConfig(ParamConfig):
-    def vod2uv(self, ens: str) -> bool:
-        _, reqs = _source_from_location(ens, self.sources)
+    def vod2uv(self, fc: str) -> bool:
+        _, reqs = _source_from_location(fc, self.sources)
         return reqs[0].get("interpolate", {}).get("vod2uv", "0") == "1"
 
-    def forecast_request(self, window: Window, ens: str):
-        vod2uv = self.vod2uv(ens)
+    def forecast_request(self, window: Window, fc: str):
+        vod2uv = self.vod2uv(fc)
         no_expand = ("param") if vod2uv else ()
-        return vod2uv, super().forecast_request(window, ens, no_expand)
+        self.param["kwargs"].update({"vod2uv": vod2uv})
+        return super().forecast_request(window, fc, no_expand), not vod2uv
 
 
 class ExtremeConfig(ParamConfig):

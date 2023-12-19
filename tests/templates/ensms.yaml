@@ -1,14 +1,11 @@
 out_keys:
-  mars.expver: '9078'
   numberOfForecastsInEnsemble: 6
   perturbationNumber: 0
   bitsPerValue: 16
 members: 5
 parameters:
   T:
-    targets: 
-      out_mean: fileset:cascade_mean_{param}.grib
-      out_std: fileset:cascade_std_{param}.grib
+    target: fileset:cascade_{param}.grib
     defs:
       base_keys: &base_keys_T
         class: od
@@ -27,7 +24,7 @@ parameters:
         matrix-loader: file-io
     sources:
       fdb:
-        ens:
+        fc:
           - <<: *base_keys_T
             type: pf
             interpolate: *base_interp
@@ -38,10 +35,10 @@ parameters:
     - include_start_step: True
       periods:
         - range: [0, 6, 3]
+    ensemble:
+      operation: ensms
   mn2t6:
-    targets: 
-      out_mean: fileset:cascade_mean_{param}.grib
-      out_std: fileset:cascade_std_{param}.grib
+    target: fileset:cascade_{param}.grib
     defs:
       base_keys: &base_keys_mn2t6
         class: od
@@ -54,7 +51,7 @@ parameters:
         time: 12
     sources:
       fdb:
-        ens:
+        fc:
           - <<: *base_keys_mn2t6
             type: pf
           - <<: *base_keys_mn2t6
@@ -73,10 +70,10 @@ parameters:
         - 6
         - 12
         - 6
+    ensemble:
+      operation: ensms
   tp:
-    targets: 
-      out_mean: fileset:cascade_mean_{param}.grib
-      out_std: fileset:cascade_std_{param}.grib
+    target: fileset:cascade_{param}.grib
     defs:
       base_keys: &base_keys_tp
         class: od
@@ -89,7 +86,7 @@ parameters:
         time: 12
     sources:
       fdb:
-        ens:
+        fc:
           - <<: *base_keys_tp
             type: cf
           - <<: *base_keys_tp
@@ -104,3 +101,5 @@ parameters:
         - range: [6, 12, 6]
       window_operation: diff
       include_start_step: True
+    ensemble:
+      operation: ensms

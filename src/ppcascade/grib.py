@@ -58,18 +58,16 @@ def extreme_grib_headers(clim: FieldList, ens: FieldList, num_steps: int) -> dic
     return extreme_headers
 
 
-def threshold_grib_headers(edition: int, threshold_config: dict) -> dict:
-    ret = {"paramId": threshold_config["out_paramid"]}
+def threshold_grib_headers(
+    comparison: str, threshold: float, local_scale_factor: int, edition: int
+) -> dict:
     if edition == 2:
-        return ret
+        return {}
 
-    print(threshold_config)
-    threshold = threshold_config["value"]
-    comparison = threshold_config["comparison"]
-    if "localDecimalScaleFactor" in threshold_config:
-        scale_factor = threshold_config["localDecimalScaleFactor"]
-        ret["localDecimalScaleFactor"] = scale_factor
-        threshold_value = round(threshold * 10**scale_factor, 0)
+    ret = {}
+    if local_scale_factor is not None:
+        ret["localDecimalScaleFactor"] = local_scale_factor
+        threshold_value = round(threshold * 10**local_scale_factor, 0)
     else:
         threshold_value = threshold
 

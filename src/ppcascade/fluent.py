@@ -21,22 +21,25 @@ class SingleAction(BaseSingleAction):
     def to_multi(self, nodes: xr.DataArray):
         return MultiAction(self, nodes)
 
-    def extreme(
-        self,
-        climatology: Action,
-        eps: float,
-        num_steps: int,
-        target_efi: str = "null:",
-        grib_sets: dict = {},
-    ):
+    def non_descript_dim(self, dim: str):
+        """
+        Mark in node attributes a dimension in node array that is not
+        a metadata key
+        """
+        self.nodes.attrs.setdefault("grib_exclude", set())
+        self.nodes.attrs["grib_exclude"].add(dim)
+
+    def non_descript_dims(self):
+        return self.nodes.attrs.pop("grib_exclude", [])
+
+    def efi(self, climatology: Action, eps: float, num_steps: int):
         # Join with climatology and compute efi control
         payload = Payload(
             NumpyFieldListBackend.efi,
             (Node.input_name(1), Node.input_name(0), eps, num_steps),
             {"control": True},
         )
-        ret = self.join(climatology, "datatype").reduce(payload)
-        return ret.write(target_efi, grib_sets)
+        return self.join(climatology, "**datatype**").reduce(payload)
 
     def cluster(self, config, ncomp_file, indexes, deterministic):
         return self.map(
@@ -49,8 +52,11 @@ class SingleAction(BaseSingleAction):
     def write(self, target, config_grib_sets: dict):
         if target != "null:":
             grib_sets = config_grib_sets.copy()
+            exclude = self.non_descript_dims()
             grib_sets.update(self.nodes.attrs)
             for name, values in self.nodes.coords.items():
+                if name in exclude:
+                    continue
                 if values.data.ndim == 0:
                     grib_sets[name] = values.data
                 else:
@@ -67,14 +73,22 @@ class MultiAction(BaseMultiAction):
             return SingleAction.from_payload(self, payload_or_node)
         return SingleAction(self, payload_or_node)
 
-    def diff(self, key: str = "", **method_kwargs):
+    def non_descript_dim(self, dim: str):
+        """
+        Mark in node attributes a dimension in node array that is not
+        a metadata key
+        """
+        self.nodes.attrs.setdefault("grib_exclude", set())
+        self.nodes.attrs["grib_exclude"].add(dim)
+
+    def non_descript_dims(self):
+        return self.nodes.attrs.pop("grib_exclude", [])
+
+    def diff(self, dim: str = "", **method_kwargs):
         return self.reduce(
             Payload(NumpyFieldListBackend.diff, kwargs=method_kwargs),
-            key,
+            dim,
         )
-
-    def norm(self, key: str = ""):
-        return self.reduce(Payload(NumpyFieldListBackend.norm), key)
 
     def extreme(
         self,
@@ -82,69 +96,91 @@ class MultiAction(BaseMultiAction):
         sot: list,
         eps: float,
         num_steps: int,
-        target_efi: str = "null:",
-        target_sot: str = "null:",
-        grib_sets: dict = {},
+        efi_control: bool = False,
+        dim: str = "number",
+        new_dim: str = "type",
     ):
-        # First concatenate across ensemble, and then join
-        # with climatology and reduce efi/sot
-        def _extreme(action, number):
-            if number == 0:
-                payload = Payload(
+        efi = self.efi(climatology, eps, num_steps, dim)
+        efi._add_dimension(new_dim, "efi")
+        if efi_control:
+            control = self.select({dim: 0}).efi(climatology, eps, num_steps)
+            control._add_dimension(new_dim, "efic")
+            efi = efi.join(control, new_dim)
+        sot = self.sot(climatology, eps, sot, num_steps, dim, new_dim)
+        ret = efi.join(sot, new_dim)
+        ret.non_descript_dim(new_dim)
+        return ret
+
+    def efi(self, climatology: Action, eps: float, num_steps: int, dim: str = "number"):
+        return (
+            self.concatenate(dim)
+            .join(climatology, "**datatype**")
+            .reduce(
+                Payload(
                     NumpyFieldListBackend.efi,
                     (Node.input_name(1), Node.input_name(0), eps, num_steps),
                 )
-                target = target_efi
-            else:
-                payload = Payload(
+            )
+        )
+
+    def sot(
+        self,
+        climatology: Action,
+        eps: float,
+        sot: list[int],
+        num_steps: int,
+        dim: str = "number",
+        new_dim: str = "sot",
+    ):
+        def _sot(action: Action, number: int):
+            new_sot = action.reduce(
+                Payload(
                     NumpyFieldListBackend.sot,
                     (Node.input_name(1), Node.input_name(0), number, eps, num_steps),
                 )
-                target = target_sot
-            new_extreme = action.reduce(payload)
-            new_extreme._add_dimension("number", number)
-            return new_extreme.write(target, grib_sets)
+            )
+            new_sot._add_dimension(new_dim, number)
+            return new_sot
 
-        return (
-            self.concatenate("number")
-            .join(climatology, "datatype")
-            .transform(_extreme, [0] + sot, "number")
+        ret = (
+            self.concatenate(dim)
+            .join(climatology, "**datatype**")
+            .transform(_sot, sot, new_dim)
         )
+        ret.non_descript_dim(new_dim)
+        return ret
 
     def ensms(
-        self, target_mean: str = "null:", target_std: str = "null:", grib_sets={}
+        self,
+        dim: str = "number",
+        new_dim: str | xr.DataArray = xr.DataArray(["mean", "std"], name="type"),
     ):
-        mean = self.mean("number")
-        mean._add_dimension("marsType", "em")
-        mean.write(target_mean, grib_sets)
-        std = self.std("number")
-        std._add_dimension("marsType", "es")
-        std.write(target_std, grib_sets)
-        res = mean.join(std, "marsType")
+        mean = self.mean(dim)
+        std = self.std(dim)
+        res = mean.join(std, new_dim)
+        res.non_descript_dim(new_dim if isinstance(new_dim, str) else new_dim.name)
         return res
 
     def threshold_prob(
-        self, thresholds: list, target: str = "null:", grib_sets: dict = {}
+        self,
+        comparison: str,
+        value: float,
+        local_scale_factor: float = None,
+        dim: str = "number",
     ):
-        def _threshold_prob(action, threshold):
-            payload = Payload(
-                NumpyFieldListBackend.threshold,
-                (threshold, Node.input_name(0), grib_sets.get("edition", 1)),
-            )
-            new_threshold_action = (
-                action.map(payload)
-                .map(
-                    Payload(
-                        lambda x: FieldList.from_numpy(x.values * 100, x.metadata())
-                    )
-                )
-                .mean("number")
-            )
-            new_threshold_action._add_dimension("paramId", threshold["out_paramid"])
-            return new_threshold_action
-
-        return self.transform(_threshold_prob, thresholds, "paramId").write(
-            target, grib_sets
+        payload = Payload(
+            NumpyFieldListBackend.threshold,
+            (
+                Node.input_name(0),
+                comparison,
+                value,
+                local_scale_factor,
+            ),  # Needs edition!!
+        )
+        return (
+            self.map(payload)
+            .map(Payload(lambda x: FieldList.from_numpy(x.values * 100, x.metadata())))
+            .mean(dim)
         )
 
     def anomaly(self, climatology: Action, window: Window):
@@ -155,16 +191,20 @@ class MultiAction(BaseMultiAction):
         )
 
         anom = self.join(
-            climatology.select({"type": "em"}), "datatype", match_coord_values=True
+            climatology.select({"type": "em"}), "**datatype**", match_coord_values=True
         ).subtract(extract_keys=extract)
 
         if window.options.get("std_anomaly", False):
             anom = anom.join(
-                climatology.select({"type": "es"}), "datatype", match_coord_values=True
+                climatology.select({"type": "es"}),
+                "**datatype**",
+                match_coord_values=True,
             ).divide()
         return anom
 
-    def quantiles(self, n: int = 100, target: str = "null:", grib_sets: dict = {}):
+    def quantiles(
+        self, num_quantiles: int = 100, dim: str = "number", new_dim: str = "quantile"
+    ):
         def _quantiles(action, quantile):
             payload = Payload(
                 NumpyFieldListBackend.quantiles, (Node.input_name(0), quantile)
@@ -173,42 +213,59 @@ class MultiAction(BaseMultiAction):
                 new_quantile = action.map(payload)
             else:
                 new_quantile = action.map(payload)
-            new_quantile._add_dimension("perturbationNumber", quantile)
+            new_quantile._add_dimension(new_dim, quantile)
             return new_quantile
 
-        return (
-            self.concatenate("number")
-            .transform(_quantiles, np.linspace(0.0, 1.0, n + 1), "perturbationNumber")
-            .write(target, grib_sets)
+        ret = self.concatenate(dim).transform(
+            _quantiles, np.linspace(0.0, 1.0, num_quantiles + 1), new_dim
         )
+        ret.non_descript_dim(new_dim)
+        return ret
 
-    def wind_speed(self, vod2uv: bool, target: str = "null:", grib_sets={}):
+    def wind_speed(self, vod2uv: bool, dim: str = "param"):
         if vod2uv:
             ret = self.map(Payload(NumpyFieldListBackend.norm, (Node.input_name(0),)))
         else:
-            ret = self.param_operation("norm")
-        return ret.write(target, grib_sets)
+            ret = self.reduce(Payload(NumpyFieldListBackend.norm), dim)
+        return ret
 
-    def param_operation(self, operation: str | Payload):
+    def param_operation(
+        self, operation: str | Payload | None, dim: str = "param", **kwargs
+    ):
         if operation is None:
             return self
         if isinstance(operation, str):
-            return getattr(self, operation)("param")
-        return self.reduce(operation, "param")
+            if hasattr(self, operation):
+                return getattr(self, operation)(dim=dim, **kwargs)
+            operation = Payload(
+                getattr(NumpyFieldListBackend, operation), kwargs=kwargs
+            )
+        return self.reduce(operation, dim)
 
-    def window_operation(
-        self, window: Window, target: str = "null:", grib_sets: dict = {}
+    def ensemble_operation(
+        self, operation: str | Payload | None, dim: str = "number", **kwargs
     ):
+        if operation is None:
+            return self
+        if isinstance(operation, str):
+            if hasattr(self, operation):
+                return getattr(self, operation)(dim=dim, **kwargs)
+            operation = Payload(
+                getattr(NumpyFieldListBackend, operation), kwargs=kwargs
+            )
+        return self.reduce(operation, dim)
+
+    def window_operation(self, window: Window, dim: str = "step"):
         if window.operation is None:
-            self._squeeze_dimension("step")
+            self._squeeze_dimension(dim)
             ret = self
         else:
-            ret = getattr(self, window.operation)("step")
+            ret = getattr(self, window.operation)(dim)
         if window.end - window.start == 0:
             ret.add_attributes({"step": window.name})
         else:
             ret.add_attributes({"stepRange": window.name})
-        return ret.write(target, grib_sets)
+        return ret
 
     def pca(self, config, mask, target: str = None):
         if mask is not None:
@@ -255,6 +312,7 @@ class MultiAction(BaseMultiAction):
     def write(self, target, config_grib_sets: dict):
         if target != "null:":
             coords = list(self.nodes.coords.keys())
+            exclude = self.non_descript_dims()
             for node_attrs in itertools.product(
                 *[self.nodes.coords[key].data for key in coords]
             ):
@@ -265,7 +323,9 @@ class MultiAction(BaseMultiAction):
 
                 grib_sets = config_grib_sets.copy()
                 grib_sets.update(self.nodes.attrs)
-                grib_sets.update(node_coords)
+                grib_sets.update(
+                    {k: v for k, v in node_coords.items() if k not in exclude}
+                )
                 self.sinks.append(
                     Node(
                         Payload(write_grib, (target, Node.input_name(0), grib_sets)),

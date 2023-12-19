@@ -43,7 +43,7 @@ def _read(
     return all_actions
 
 
-def anomaly_prob(args):
+def ensemble_anomaly(args):
     config = Config(args)
     total_graph = Graph([])
     for _, cfg in config.options["parameters"].items():
@@ -55,40 +55,17 @@ def anomaly_prob(args):
 
             total_graph += (
                 _read(param_config.forecast_request(window, args.ensemble))
+                .param_operation(
+                    param_config.param["operation"], **param_config.param["kwargs"]
+                )
                 .anomaly(climatology, window)
-                .window_operation(
-                    window,
-                    param_config.get_target("out_ensemble"),
-                    param_config.out_keys,
+                .window_operation(window)
+                .ensemble_operation(
+                    param_config.ensemble["operation"],
+                    **param_config.ensemble["kwargs"]
                 )
-                .threshold_prob(
-                    window.options.get("thresholds", []),
-                    param_config.get_target("out_prob"),
-                    {**param_config.out_keys, **window.grib_set},
-                )
-                .graph()
-            )
-
-    return deduplicate_nodes(total_graph)
-
-
-def prob(args):
-    config = Config(args)
-    total_graph = Graph([])
-    for _, cfg in config.options["parameters"].items():
-        param_config = ParamConfig(config.members, cfg, config.in_keys, config.out_keys)
-        for window in param_config.windows:
-            total_graph += (
-                _read(param_config.forecast_request(window, args.ensemble))
-                .param_operation(param_config.param_operation)
-                .window_operation(
-                    window,
-                    param_config.get_target("out_ensemble"),
-                    param_config.out_keys,
-                )
-                .threshold_prob(
-                    window.options.get("thresholds", []),
-                    param_config.get_target("out_prob"),
+                .write(
+                    param_config.target,
                     {**param_config.out_keys, **window.grib_set},
                 )
                 .graph()
@@ -103,33 +80,27 @@ def wind(args):
     for _, cfg in config.options["parameters"].items():
         param_config = WindConfig(config.members, cfg, config.in_keys, config.out_keys)
         for window in param_config.windows:
-            for loc, target in [
-                (args.ensemble, f"out_ens_ws"),
-                (args.deterministic, f"out_det_ws"),
-            ]:
-                if loc is None:
-                    continue
-                vod2uv, requests = param_config.forecast_request(window, loc)
-                ws = _read(
-                    requests,
-                    stream=(not vod2uv),
-                ).wind_speed(
-                    vod2uv,
-                    param_config.get_target(target),
-                    param_config.out_keys,
+            requests, stream = param_config.forecast_request(window, args.ensemble)
+            total_graph += (
+                _read(requests, stream=stream)
+                .param_operation(
+                    param_config.param["operation"], **param_config.param["kwargs"]
                 )
-                if loc == args.ensemble:
-                    ws = ws.ensms(
-                        param_config.get_target("out_mean"),
-                        param_config.get_target("out_std"),
-                        {**param_config.out_keys, **window.grib_set},
-                    )
-                total_graph += ws.graph()
-
+                .window_operation(window)
+                .ensemble_operation(
+                    param_config.ensemble["operation"],
+                    **param_config.ensemble["kwargs"]
+                )
+                .write(
+                    param_config.target,
+                    {**param_config.out_keys, **window.grib_set},
+                )
+                .graph()
+            )
     return deduplicate_nodes(total_graph)
 
 
-def ensms(args):
+def ensemble(args):
     config = Config(args)
     total_graph = Graph([])
     for _, cfg in config.options["parameters"].items():
@@ -137,10 +108,16 @@ def ensms(args):
         for window in param_config.windows:
             total_graph += (
                 _read(param_config.forecast_request(window, args.ensemble))
+                .param_operation(
+                    param_config.param["operation"], **param_config.param["kwargs"]
+                )
                 .window_operation(window)
-                .ensms(
-                    param_config.get_target("out_mean"),
-                    param_config.get_target("out_std"),
+                .ensemble_operation(
+                    param_config.ensemble["operation"],
+                    **param_config.ensemble["kwargs"]
+                )
+                .write(
+                    param_config.target,
                     {**param_config.out_keys, **window.grib_set},
                 )
                 .graph()
@@ -161,61 +138,24 @@ def extreme(args):
                     window, args.climatology, True, no_expand=("quantile")
                 )
             )
-            parameter = _read(
-                param_config.forecast_request(window, args.ensemble)
-            ).param_operation(param_config.param_operation)
-            eps = float(param_config.options["eps"])
-            grib_sets = {**param_config.out_keys, **window.grib_set}
-
-            # EFI Control
-            if param_config.options.get("efi_control", False):
-                total_graph += (
-                    parameter.select({"number": 0})
-                    .window_operation(window)
-                    .extreme(
-                        climatology,
-                        eps,
-                        len(window.steps),
-                        param_config.get_target(f"out_efi"),
-                        grib_sets,
-                    )
-                    .graph()
-                )
-
             total_graph += (
-                parameter.window_operation(window)
-                .extreme(
-                    climatology,
-                    list(map(int, param_config.options["sot"])),
-                    eps,
-                    len(window.steps),
-                    param_config.get_target(f"out_efi"),
-                    param_config.get_target(f"out_sot"),
-                    grib_sets,
+                _read(param_config.forecast_request(window, args.ensemble))
+                .param_operation(
+                    param_config.param["operation"], **param_config.param["kwargs"]
                 )
-                .graph()
-            )
-
-    return deduplicate_nodes(total_graph)
-
-
-def quantiles(args):
-    config = Config(args)
-    total_graph = Graph([])
-    for _, cfg in config.options["parameters"].items():
-        param_config = ParamConfig(config.members, cfg, config.in_keys, config.out_keys)
-        for window in param_config.windows:
-            total_graph += (
-                _read(param_config.forecast_request(window, args.ensemble), "number")
-                .param_operation(param_config.param_operation)
                 .window_operation(window)
-                .quantiles(
-                    param_config.options["num_quantiles"],
-                    target=param_config.get_target("out_quantiles"),
-                    grib_sets={**param_config.out_keys, **window.grib_set},
+                .__getattribute__(param_config.ensemble["operation"])(
+                    climatology,
+                    num_steps=len(window.steps),
+                    **param_config.ensemble["kwargs"]
+                )
+                .write(
+                    param_config.target,
+                    {**param_config.out_keys, **window.grib_set},
                 )
                 .graph()
             )
+
     return deduplicate_nodes(total_graph)
 
 
@@ -227,17 +167,17 @@ def clustereps(args):
         spread = _read(
             config.spread_compute_request(args.spread_compute, no_expand=("step",)),
             join_key="date",
-        ).mean(key="date")
+        ).mean(dim="date")
 
     pca = (
         _read(config.forecast_request(args.ensemble, no_expand="step"))
-        .concatenate(key="number")
-        .join(spread, dim_name="data_type")
+        .concatenate(dim="number")
+        .join(spread, dim="data_type")
         .pca(config, args.mask, args.pca)
     )
     cluster = pca.cluster(config, args.ncomp_file, args.indexes, args.deterministic)
     total_graph = (
-        pca.join(cluster, dim_name="data_type")
+        pca.join(cluster, dim="data_type")
         .attribution(
             config,
             {
@@ -250,4 +190,4 @@ def clustereps(args):
     return deduplicate_nodes(total_graph)
 
 
-GRAPHS = [anomaly_prob, prob, ensms, wind, extreme, clustereps, quantiles]
+GRAPHS = [ensemble_anomaly, ensemble, wind, extreme, clustereps]

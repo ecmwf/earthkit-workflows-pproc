@@ -1,7 +1,6 @@
 members: 5
 quantiles: &quantiles 4
 out_keys:
-  expver: '0001'
   type: "pb"
   numberOfForecastsInEnsemble: *quantiles
 parameters:
@@ -16,10 +15,12 @@ parameters:
         time: 00
         param: 167
         stream: enfo
-    num_quantiles: *quantiles
+    ensemble:
+      operation: quantiles
+      num_quantiles: *quantiles
     sources:
       fdb:
-        ens:
+        fc:
           - <<: *base_keys_2t
             type: cf
           - <<: *base_keys_2t
@@ -30,8 +31,7 @@ parameters:
           - 0
           - 6
           - 3
-    targets:
-      out_quantiles: "fileset:cascade_quantiles_{param}.grib"
+    target: "fileset:cascade_quantiles_{param}.grib"
   tp:
     defs:
       base_keys: &base_keys_tp
@@ -43,10 +43,12 @@ parameters:
         time: 00
         param: 228
         stream: enfo
-    num_quantiles: *quantiles
+    ensemble:
+      operation: quantiles
+      num_quantiles: *quantiles
     sources:
       fdb:
-        ens:
+        fc:
           - <<: *base_keys_tp
             type: cf
           - <<: *base_keys_tp
@@ -66,5 +68,4 @@ parameters:
             - 3
             - 9
             - 6
-    targets:
-      out_quantiles: "fileset:cascade_quantiles_{param}.grib"
+    target: "fileset:cascade_quantiles_{param}.grib"

@@ -34,12 +34,12 @@ def node_info_ext(sinks, node):
 @pytest.mark.parametrize(
     "product, config, expected_num_nodes",
     [
-        ["prob", f"{ROOT_DIR}/templates/prob.yaml", 355],
-        ["anomaly_prob", f"{ROOT_DIR}/templates/t850.yaml", 260],
+        ["ensemble", f"{ROOT_DIR}/templates/prob.yaml", 355],
+        ["ensemble_anomaly", f"{ROOT_DIR}/templates/t850.yaml", 260],
         ["wind", f"{ROOT_DIR}/templates/wind.yaml", 168],
-        ["ensms", f"{ROOT_DIR}/templates/ensms.yaml", 180],
+        ["ensemble", f"{ROOT_DIR}/templates/ensms.yaml", 180],
         ["extreme", f"{ROOT_DIR}/templates/extreme.yaml", 150],
-        ["quantiles", f"{ROOT_DIR}/templates/quantiles.yaml", 92],
+        ["ensemble", f"{ROOT_DIR}/templates/quantiles.yaml", 92],
     ],
 )
 def test_graph_construction(product, config, expected_num_nodes):

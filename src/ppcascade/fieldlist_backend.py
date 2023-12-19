@@ -164,16 +164,20 @@ class NumpyFieldListBackend(BaseBackend):
         return FieldList.from_numpy(standardise_output(norm), arrays[0][0].metadata())
 
     def threshold(
-        threshold_config: dict, arr: NumpyFieldList, edition: int = 1
+        arr: NumpyFieldList,
+        comparison: str,
+        value: float,
+        local_scale_factor=None,
+        edition: int = 1,
     ) -> NumpyFieldList:
         xp = array_api_compat.array_namespace(arr.values)
         # Find all locations where np.nan appears as an ensemble value
         is_nan = xp.isnan(arr.values)
-        thesh = comp_str2func(xp, threshold_config["comparison"])(
-            arr.values, threshold_config["value"]
-        )
+        thesh = comp_str2func(xp, comparison)(arr.values, value)
         res = xp.where(is_nan, xp.nan, thesh)
-        threshold_headers = threshold_grib_headers(edition, threshold_config)
+        threshold_headers = threshold_grib_headers(
+            comparison, value, local_scale_factor, edition
+        )
         metadata = arr[0].metadata().override(threshold_headers)
         return FieldList.from_numpy(standardise_output(res), metadata)
 
@@ -189,7 +193,7 @@ class NumpyFieldListBackend(BaseBackend):
             extreme_headers.update({"marsType": "efic", "totalNumber": 1, "number": 0})
             metadata = ens[0].metadata().override(extreme_headers)
         else:
-            extreme_headers.update({"marsType": "efi", "efiOrder": 0})
+            extreme_headers.update({"marsType": "efi", "efiOrder": 0, "number": 0})
             metadata = ens[0].metadata().override(extreme_headers)
 
         xp = array_api_compat.array_namespace(ens.values, clim.values)
@@ -216,7 +220,14 @@ class NumpyFieldListBackend(BaseBackend):
         metadata = (
             ens[0]
             .metadata()
-            .override({**extreme_headers, "marsType": "sot", "efiOrder": efi_order})
+            .override(
+                {
+                    **extreme_headers,
+                    "marsType": "sot",
+                    "efiOrder": efi_order,
+                    "number": number,
+                }
+            )
         )
 
         xp = array_api_compat.array_namespace(ens.values, clim.values)
@@ -228,13 +239,16 @@ class NumpyFieldListBackend(BaseBackend):
         xp = array_api_compat.array_namespace(ens.values)
         with PatchModule(extreme, "numpy", xp):
             res = list(iter_quantiles(ens.values, [quantile], method="numpy"))[0]
-        return FieldList.from_numpy(standardise_output(res), ens[0].metadata())
+        return FieldList.from_numpy(
+            standardise_output(res),
+            ens[0].metadata().override({"perturbationNumber": quantile}),
+        )
 
     def filter(
-        comparison: str,
-        threshold: float,
         arr1: NumpyFieldList,
         arr2: NumpyFieldList,
+        comparison: str,
+        threshold: float,
         *,
         replacement: float = 0,
     ) -> NumpyFieldList:

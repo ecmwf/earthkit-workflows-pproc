@@ -5,10 +5,12 @@ members:
   start: 1
 parameters:
   tp:
-    targets: 
-      out_efi: "fileset:cascade_extreme_{param}.grib"
-      out_sot: "fileset:cascade_extreme_{param}.grib"
-    efi_control: True
+    target: "fileset:cascade_extreme_{param}.grib"
+    ensemble:
+      operation: extreme
+      eps: 1e-4
+      sot: [90]
+      efi_control: True
     defs:
       base_keys: &base_keys_tp
         class: od
@@ -23,7 +25,7 @@ parameters:
         matrix-loader: file-io
     sources:
       fdb:
-        ens:
+        fc:
           - <<: *base_keys_tp
             date: 20230914
             time: 12
@@ -48,9 +50,6 @@ parameters:
             12-36: 0-24
             12-84: 0-72
             36-60: 24-48
-    eps: 1e-4
-    sot:
-    - 90
     windows:
     - grib_set:
         edition: 1
@@ -76,9 +75,7 @@ parameters:
       window_operation: diff
       include_start_step: True
   capeshear:
-    targets: 
-      out_efi: "fileset:cascade_extreme_{param}.grib"
-      out_sot: "fileset:cascade_extreme_{param}.grib"
+    target: "fileset:cascade_extreme_{param}.grib"
     defs:
       base_keys: &base_keys_capeshear
         class: od
@@ -92,7 +89,7 @@ parameters:
         matrix-loader: file-io
     sources:
       fdb:
-        ens:
+        fc:
           - <<: *base_keys_capeshear
             stream: enfo
             type: cf
@@ -118,12 +115,14 @@ parameters:
           interpolate: *base_interp_capeshear
           step:
             12-36: 0-24
-    eps: 1e-4
-    input_filter_operation:
+    ensemble:
+      operation: extreme
+      eps: 1e-4
+      sot: [90]
+    param:
+      operation: filter
       comparison: <=
       threshold: 10
-    sot:
-    - 90
     windows:
     - grib_set:
         param: 228035

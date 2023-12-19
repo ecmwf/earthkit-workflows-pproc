@@ -3,8 +3,9 @@ out_keys:
 members: 5
 parameters:
   wind1:
-    targets: 
-      out_ens_ws: fileset:wind_{step}_{stream}.grib
+    target: fileset:wind_{step}_{stream}.grib
+    param:
+      operation: wind_speed
     defs:
       base_keys: &base_keys
         class: od
@@ -21,7 +22,7 @@ parameters:
         matrix-loader: file-io
     sources:
       fdb:
-        ens:
+        fc:
           - <<: *base_keys
             stream: enfo
             type: pf
@@ -39,9 +40,9 @@ parameters:
         periods:
           - range: [0, 6, 3]
   wind_vod2uv:
-    targets: 
-      out_mean: fileset:wind_{step}_{type}.grib
-      out_std: fileset:wind_{step}_{type}.grib
+    target: fileset:wind_{step}_{type}.grib
+    param:
+      operation: wind_speed
     defs:
       base_keys: &vod2uv_base_keys
         class: od
@@ -61,7 +62,7 @@ parameters:
         matrix-loader: file-io
     sources:
       fdb:
-        ens:
+        fc:
           - <<: *vod2uv_base_keys
             type: cf
             interpolate: *vod2uv_base_interp
@@ -76,3 +77,5 @@ parameters:
           bitsPerValue: 24
         periods:
           - range: [0, 6, 3]
+    ensemble:
+      operation: ensms
