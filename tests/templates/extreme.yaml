@@ -51,7 +51,7 @@ parameters:
             12-84: 0-72
             36-60: 24-48
     windows:
-    - grib_set:
+      grib_set:
         edition: 1
         gribTablesVersionNo: 132
         indicatorOfParameter: 228
@@ -59,20 +59,11 @@ parameters:
         mars.expver: '9078'
         timeRangeIndicator: 5
         stepType: diff
-      periods:
-      - range:
-        - 12
-        - 36
-        - 24
-      - range:
-        - 36
-        - 60
-        - 24
-      - range:
-        - 12
-        - 84
-        - 72
-      window_operation: diff
+      ranges:
+      - [12, 36, 24]
+      - [36, 60, 24]
+      - [12, 84, 72]
+      operation: diff
       include_start_step: True
   capeshear:
     target: "fileset:cascade_extreme_{param}.grib"
@@ -124,7 +115,7 @@ parameters:
       comparison: <=
       threshold: 10
     windows:
-    - grib_set:
+      grib_set:
         param: 228035
         typeOfStatisticalProcessing: 1
         edition: 1
@@ -134,9 +125,6 @@ parameters:
         gribTablesVersionNo: 132
         localDefinitionNumber: 19
         mars.expver: '9078'
-      periods:
-      - range:
-        - 12
-        - 36
-        - 6
-      window_operation: maximum
+      ranges:
+      - [12, 36, 6]
+      operation: maximum

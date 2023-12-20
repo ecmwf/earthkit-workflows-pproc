@@ -48,28 +48,30 @@ def ensemble_anomaly(args):
     total_graph = Graph([])
     for _, cfg in config.options["parameters"].items():
         param_config = ParamConfig(config.members, cfg, config.in_keys, config.out_keys)
-        for window in param_config.windows:
-            climatology = _read(
-                param_config.clim_request(window, args.climatology)
-            )  # Will contain type em and es
+        climatology = _read(
+            param_config.clim_request(args.climatology), "step"
+        )  # Will contain type em and es
 
-            total_graph += (
-                _read(param_config.forecast_request(window, args.ensemble))
-                .param_operation(
-                    param_config.param["operation"], **param_config.param["kwargs"]
-                )
-                .anomaly(climatology, window)
-                .window_operation(window)
-                .ensemble_operation(
-                    param_config.ensemble["operation"],
-                    **param_config.ensemble["kwargs"]
-                )
-                .write(
-                    param_config.target,
-                    {**param_config.out_keys, **window.grib_set},
-                )
-                .graph()
+        total_graph += (
+            _read(param_config.forecast_request(args.ensemble))
+            .param_operation(
+                param_config.param["operation"], **param_config.param["kwargs"]
             )
+            .anomaly(
+                climatology.select({"type": "em"}),
+                climatology.select({"type": "es"}),
+                param_config.windows.options.get("std_anomaly", False),
+            )
+            .window_operation(param_config.windows)
+            .ensemble_operation(
+                param_config.ensemble["operation"], **param_config.ensemble["kwargs"]
+            )
+            .write(
+                param_config.target,
+                {**param_config.out_keys},
+            )
+            .graph()
+        )
 
     return deduplicate_nodes(total_graph)
 
@@ -79,24 +81,22 @@ def wind(args):
     total_graph = Graph([])
     for _, cfg in config.options["parameters"].items():
         param_config = WindConfig(config.members, cfg, config.in_keys, config.out_keys)
-        for window in param_config.windows:
-            requests, stream = param_config.forecast_request(window, args.ensemble)
-            total_graph += (
-                _read(requests, stream=stream)
-                .param_operation(
-                    param_config.param["operation"], **param_config.param["kwargs"]
-                )
-                .window_operation(window)
-                .ensemble_operation(
-                    param_config.ensemble["operation"],
-                    **param_config.ensemble["kwargs"]
-                )
-                .write(
-                    param_config.target,
-                    {**param_config.out_keys, **window.grib_set},
-                )
-                .graph()
+        requests, stream = param_config.forecast_request(args.ensemble)
+        total_graph += (
+            _read(requests, stream=stream)
+            .param_operation(
+                param_config.param["operation"], **param_config.param["kwargs"]
             )
+            .window_operation(param_config.windows)
+            .ensemble_operation(
+                param_config.ensemble["operation"], **param_config.ensemble["kwargs"]
+            )
+            .write(
+                param_config.target,
+                {**param_config.out_keys},
+            )
+            .graph()
+        )
     return deduplicate_nodes(total_graph)
 
 
@@ -105,23 +105,21 @@ def ensemble(args):
     total_graph = Graph([])
     for _, cfg in config.options["parameters"].items():
         param_config = ParamConfig(config.members, cfg, config.in_keys, config.out_keys)
-        for window in param_config.windows:
-            total_graph += (
-                _read(param_config.forecast_request(window, args.ensemble))
-                .param_operation(
-                    param_config.param["operation"], **param_config.param["kwargs"]
-                )
-                .window_operation(window)
-                .ensemble_operation(
-                    param_config.ensemble["operation"],
-                    **param_config.ensemble["kwargs"]
-                )
-                .write(
-                    param_config.target,
-                    {**param_config.out_keys, **window.grib_set},
-                )
-                .graph()
+        total_graph += (
+            _read(param_config.forecast_request(args.ensemble))
+            .param_operation(
+                param_config.param["operation"], **param_config.param["kwargs"]
             )
+            .window_operation(param_config.windows)
+            .ensemble_operation(
+                param_config.ensemble["operation"], **param_config.ensemble["kwargs"]
+            )
+            .write(
+                param_config.target,
+                {**param_config.out_keys},
+            )
+            .graph()
+        )
     return deduplicate_nodes(total_graph)
 
 
@@ -132,29 +130,27 @@ def extreme(args):
         param_config = ExtremeConfig(
             config.members, cfg, config.in_keys, config.out_keys
         )
-        for window in param_config.windows:
-            climatology = _read(
-                param_config.clim_request(
-                    window, args.climatology, True, no_expand=("quantile")
-                )
+        climatology = _read(
+            param_config.clim_request(args.climatology, True, no_expand=("quantile"))
+        )
+        total_graph += (
+            _read(param_config.forecast_request(args.ensemble))
+            .param_operation(
+                param_config.param["operation"], **param_config.param["kwargs"]
             )
-            total_graph += (
-                _read(param_config.forecast_request(window, args.ensemble))
-                .param_operation(
-                    param_config.param["operation"], **param_config.param["kwargs"]
-                )
-                .window_operation(window)
-                .__getattribute__(param_config.ensemble["operation"])(
-                    climatology,
-                    num_steps=len(window.steps),
-                    **param_config.ensemble["kwargs"]
-                )
-                .write(
-                    param_config.target,
-                    {**param_config.out_keys, **window.grib_set},
-                )
-                .graph()
+            .window_operation(param_config.windows)
+            .ensemble_extreme(
+                param_config.ensemble["operation"],
+                climatology,
+                param_config.windows,
+                **param_config.ensemble["kwargs"]
             )
+            .write(
+                param_config.target,
+                {**param_config.out_keys},
+            )
+            .graph()
+        )
 
     return deduplicate_nodes(total_graph)
 

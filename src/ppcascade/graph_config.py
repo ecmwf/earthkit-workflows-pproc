@@ -4,6 +4,7 @@ import bisect
 from datetime import timedelta
 import copy
 import numpy as np
+from dataclasses import dataclass, field
 
 from pproc.common.config import Config as BaseConfig
 from pproc.clustereps.config import FullClusterConfig
@@ -11,26 +12,39 @@ from pproc.clustereps.config import FullClusterConfig
 from .io import _source_from_location
 
 
-class Window:
-    def __init__(self, window_range, operation, include_init, window_options):
-        self.start = int(window_range[0])
-        self.end = int(window_range[1])
-        window_size = self.end - self.start
-        self.include_init = include_init or (window_size == 0)
+@dataclass
+class Range:
+    name: str
+    steps: list[int]
+
+
+@dataclass
+class WindowConfig:
+    operation: str
+    include_init: bool
+    options: dict
+    grib_sets: dict
+    ranges: list[Range] = field(default_factory=list)
+
+    # TOOD: precomputed windows, how is their EFI computed?? Do we need num steps?
+    def add_range(self, start: int, end: int, step: int = 1, allowed_steps: list = []):
+        window_size = end - start
         if window_size == 0:
-            self.name = str(self.end)
+            name = str(end)
         else:
-            self.name = f"{self.start}-{self.end}"
+            name = f"{start}-{end}"
 
-        self.step = int(window_range[2]) if len(window_range) > 2 else 1
-        if self.include_init:
-            self.steps = list(range(self.start, self.end + 1, self.step))
+        # Set steps in window
+        if len(allowed_steps) == 0:
+            allowed_steps = list(range(start, end + 1, step))
+        if self.include_init or (window_size == 0):
+            start_index = allowed_steps.index(start)
         else:
-            self.steps = list(range(self.start + self.step, self.end + 1, self.step))
-
-        self.operation = operation
-        self.options = window_options.copy()
-        self.grib_set = self.options.pop("grib_set", {})
+            # Case when window.start not in steps
+            start_index = bisect.bisect_right(allowed_steps, start)
+        steps = allowed_steps[start_index : allowed_steps.index(end) + 1]
+        assert name not in self.ranges
+        self.ranges.append(Range(name, steps))
 
 
 class Request:
@@ -100,7 +114,6 @@ class MultiSourceRequest(Request):
 
     def __getitem__(self, key):
         values = [x.__getitem__(key) for x in self.requests]
-        # print("__getitem__", key, values[0], values[1], np.all([values[0] == values[x] for x in range(1, len(values))]))
         if np.all([values[0] == values[x] for x in range(1, len(values))]):
             return values[0]
         raise Exception(f"Requests {self.requests} differ on value for key {key}")
@@ -193,17 +206,15 @@ class ParamConfig:
                 #     steps.add(Step(sstep, sstep + range_len))
         return sorted(unique_steps)
 
-    @classmethod
-    def _generate_windows(cls, windows_config):
-        windows = []
-        for window_options in windows_config:
-            include_init = window_options.pop("include_start_step", False)
-            operation = window_options.pop("window_operation", None)
-            for window in window_options.pop("periods"):
-                windows.append(
-                    Window(window["range"], operation, include_init, window_options)
-                )
-        return windows
+    def _generate_windows(self, windows_config: dict):
+        include_init = windows_config.pop("include_start_step", False)
+        operation = windows_config.pop("operation", None)
+        ranges = windows_config.pop("ranges")
+        grib_sets = windows_config.pop("grib_set", {})
+        window = WindowConfig(operation, include_init, windows_config, grib_sets)
+        for r in ranges:
+            window.add_range(*map(int, r), allowed_steps=self.steps)
+        return window
 
     def _request_steps(self, window):
         if len(self.steps) == 0:
@@ -215,7 +226,7 @@ class ParamConfig:
             start_index = bisect.bisect_right(self.steps, window.start)
         return self.steps[start_index : self.steps.index(window.end) + 1]
 
-    def forecast_request(self, window, ens: str, no_expand: tuple[str] = ()):
+    def forecast_request(self, ens: str, no_expand: tuple[str] = ()):
         source, requests = _source_from_location(ens, self.sources)
         if isinstance(requests, dict):
             requests = [requests]
@@ -223,7 +234,8 @@ class ParamConfig:
         window_requests = []
         for request in requests:
             req = Request({**request, **self.in_keys, "source": source}, no_expand)
-            req["step"] = self._request_steps(window)
+            window_steps = [x.steps for x in self.windows.ranges]
+            req["step"] = sorted(set(sum(window_steps[1:], window_steps[0])))
             if request["type"] == "pf":
                 req["number"] = self.members
             elif request["type"] == "cf":
@@ -232,7 +244,7 @@ class ParamConfig:
         return window_requests
 
     def clim_request(
-        self, window, clim: str, accumulated: bool = False, no_expand: tuple[str] = ()
+        self, clim: str, accumulated: bool = False, no_expand: tuple[str] = ()
     ):
         source, requests = _source_from_location(clim, self.sources)
         assert len(requests) == 1, f"Expected a single request, got {requests}"
@@ -240,10 +252,15 @@ class ParamConfig:
         clim_req["source"] = source
         steps = clim_req.pop("step", {})
         if accumulated:
-            clim_req["step"] = steps.get(window.name, window.name)
+            window_ranges = [w.name for w in self.windows.ranges]
+            clim_req["step"] = list(set(map(steps.get, window_ranges, window_ranges)))
         else:
-            window_steps = self._request_steps(window)
-            clim_req["step"] = list(map(steps.get, window_steps, window_steps))
+            window_steps = [
+                list(map(steps.get, w.steps, w.steps)) for w in self.windows.ranges
+            ]
+            clim_req["step"] = sorted(set(sum(window_steps[1:], window_steps[0])))
+        if len(clim_req["step"]) == 1:
+            clim_req["step"] = clim_req["step"][0]
         return [clim_req]
 
 
@@ -252,18 +269,18 @@ class WindConfig(ParamConfig):
         _, reqs = _source_from_location(fc, self.sources)
         return reqs[0].get("interpolate", {}).get("vod2uv", "0") == "1"
 
-    def forecast_request(self, window: Window, fc: str):
+    def forecast_request(self, fc: str):
         vod2uv = self.vod2uv(fc)
         no_expand = ("param") if vod2uv else ()
         self.param["kwargs"].update({"vod2uv": vod2uv})
-        return super().forecast_request(window, fc, no_expand), not vod2uv
+        return super().forecast_request(fc, no_expand), not vod2uv
 
 
 class ExtremeConfig(ParamConfig):
     def clim_request(
-        self, window, clim: str, accumulated: bool = False, no_expand: tuple[str] = ()
+        self, clim: str, accumulated: bool = False, no_expand: tuple[str] = ()
     ):
-        clim_reqs = super().clim_request(window, clim, accumulated, no_expand)
+        clim_reqs = super().clim_request(clim, accumulated, no_expand)
         for req in clim_reqs:
             num_quantiles = int(req["quantile"])
             req["quantile"] = ["{}:100".format(i) for i in range(num_quantiles + 1)]

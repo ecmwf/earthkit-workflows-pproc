@@ -12,15 +12,15 @@ parameters:
       value: 0.001
       local_scale_factor: 3
     windows:
-      - window_operation: 'diff'
-        include_start_step: True
-        periods:
-          - range: [0, 24, 24]
-          - range: [12, 36, 24]        
-        grib_set:
-          timeRangeIndicator: 5
-          stepType: diff 
-          paramId: 131060
+      operation: 'diff'
+      include_start_step: True
+      ranges:
+        - [0, 24, 24]
+        - [12, 36, 24]        
+      grib_set:
+        timeRangeIndicator: 5
+        stepType: diff 
+        paramId: 131060
     sources:
       fdb:
         fc:
@@ -41,15 +41,15 @@ parameters:
       value: 0.005
       local_scale_factor: 3
     windows:
-      - window_operation: 'diff'
-        include_start_step: True
-        periods:
-          - range: [0, 24, 24]
-          - range: [12, 36, 24]        
-        grib_set:
-          timeRangeIndicator: 5
-          stepType: diff 
-          paramId: 131061
+      operation: 'diff'
+      include_start_step: True
+      ranges:
+        - [0, 24, 24]
+        - [12, 36, 24]        
+      grib_set:
+        timeRangeIndicator: 5
+        stepType: diff 
+        paramId: 131061
     sources:
       fdb:
         fc:
@@ -69,24 +69,24 @@ parameters:
       comparison: ">="
       value: 0.025
     windows:
-      - window_operation: 'diff'
-        include_start_step: True
-        periods:
-          - range: [0, 24, 24]
-          - range: [12, 36, 24]        
-        grib_set:
-          stepType: accum
-          stepRange: 0-0
-          edition: 2
-          scaleFactorOfLowerLimit: 0
-          probabilityType: 3
-          typeOfGeneratingProcess: 5
-          indicatorOfUnitForTimeIncrement: 1
-          timeIncrement: 12
-          packingType: grid_ccsds
-          scaleFactorOfUpperLimit: MISSING
-          scaledValueOfUpperLimit: MISSING
-          paramId: 131098
+      operation: 'diff'
+      include_start_step: True
+      ranges:
+        - [0, 24, 24]
+        - [12, 36, 24]        
+      grib_set:
+        stepType: accum
+        stepRange: 0-0
+        edition: 2
+        scaleFactorOfLowerLimit: 0
+        probabilityType: 3
+        typeOfGeneratingProcess: 5
+        indicatorOfUnitForTimeIncrement: 1
+        timeIncrement: 12
+        packingType: grid_ccsds
+        scaleFactorOfUpperLimit: MISSING
+        scaledValueOfUpperLimit: MISSING
+        paramId: 131098
     sources:
       fdb:
         fc:
@@ -106,24 +106,24 @@ parameters:
       comparison: ">="
       value: 0.05
     windows:
-      - window_operation: 'diff'
-        include_start_step: True
-        periods:
-          - range: [0, 24, 24]
-          - range: [12, 36, 24]        
-        grib_set:
-          stepType: accum
-          stepRange: 0-0
-          edition: 2
-          scaleFactorOfLowerLimit: 0
-          probabilityType: 3
-          typeOfGeneratingProcess: 5
-          indicatorOfUnitForTimeIncrement: 1
-          timeIncrement: 12
-          packingType: grid_ccsds
-          scaleFactorOfUpperLimit: MISSING
-          scaledValueOfUpperLimit: MISSING
-          paramId: 131099
+      operation: 'diff'
+      include_start_step: True
+      ranges:
+        - [0, 24, 24]
+        - [12, 36, 24]        
+      grib_set:
+        stepType: accum
+        stepRange: 0-0
+        edition: 2
+        scaleFactorOfLowerLimit: 0
+        probabilityType: 3
+        typeOfGeneratingProcess: 5
+        indicatorOfUnitForTimeIncrement: 1
+        timeIncrement: 12
+        packingType: grid_ccsds
+        scaleFactorOfUpperLimit: MISSING
+        scaledValueOfUpperLimit: MISSING
+        paramId: 131099
     sources:
       fdb:
         fc:
@@ -141,11 +141,11 @@ parameters:
     param: 
       operation: 'norm'
     windows:
-      - periods:
-          - range: [12, 24, 12]
-        include_start_step: True
-        grib_set:
-          paramId: 131068
+      ranges:
+        - [12, 24, 12]
+      include_start_step: True
+      grib_set:
+        paramId: 131068
     ensemble:
       operation: threshold_prob
       comparison: ">="
@@ -167,11 +167,11 @@ parameters:
     param:
       operation: 'norm'
     windows:
-      - periods:
-          - range: [12, 24, 12]
-        include_start_step: True
-        grib_set:
-          paramId: 131069
+      ranges:
+        - [12, 24, 12]
+      include_start_step: True
+      grib_set:
+        paramId: 131069
     ensemble:
       operation: threshold_prob
       comparison: ">="
@@ -195,13 +195,13 @@ parameters:
         start_step: 126
         end_step: 240
     windows:
-      - window_operation: minimum
-        periods:
-          - range: [120, 168]
-          - range: [120, 240]
-          - range: [168, 240]
-        grib_set:
-          paramId: 131073
+      operation: minimum
+      ranges:
+        - [120, 168]
+        - [120, 240]
+        - [168, 240]
+      grib_set:
+        paramId: 131073
     ensemble:
       operation: threshold_prob
       comparison: "<="

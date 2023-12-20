@@ -32,9 +32,9 @@ parameters:
             type: cf
             interpolate: *base_interp
     windows:
-    - include_start_step: True
-      periods:
-        - range: [0, 6, 3]
+      include_start_step: True
+      ranges:
+        - [0, 6, 3]
     ensemble:
       operation: ensms
   mn2t6:
@@ -57,19 +57,10 @@ parameters:
           - <<: *base_keys_mn2t6
             type: cf
     windows:
-    - periods:
-      - range:
-        - 0
-        - 0
-        - 6
-      - range:
-        - 0
-        - 6
-        - 6
-      - range:
-        - 6
-        - 12
-        - 6
+      ranges:
+      - [0, 0, 6]
+      - [0, 6, 6]
+      - [6, 12, 6]
     ensemble:
       operation: ensms
   tp:
@@ -92,14 +83,14 @@ parameters:
           - <<: *base_keys_tp
             type: pf
     windows:
-    - grib_set:
+      grib_set:
         paramId: 200228
         stepType: diff
-      periods:
-        - range: [0, 6, 6]
-        - range: [3, 9, 6]
-        - range: [6, 12, 6]
-      window_operation: diff
+      ranges:
+        - [0, 6, 6]
+        - [3, 9, 6]
+        - [6, 12, 6]
+      operation: diff
       include_start_step: True
     ensemble:
       operation: ensms

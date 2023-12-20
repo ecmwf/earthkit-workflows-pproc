@@ -53,7 +53,7 @@ def extreme_grib_headers(clim: FieldList, ens: FieldList, num_steps: int) -> dic
     for key in fc_keys:
         extreme_headers[key] = ens_template.get(key)
 
-    extreme_headers["ensembleSize"] = len(ens.values)
+    extreme_headers["ensembleSize"] = len(ens)
 
     return extreme_headers
 
