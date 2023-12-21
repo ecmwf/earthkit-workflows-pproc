@@ -191,13 +191,8 @@ class ParamConfig:
     def _generate_steps(cls, steps_config):
         unique_steps = set()
         for steps in steps_config:
-            start_step = steps["start_step"]
-            end_step = steps["end_step"]
-            interval = steps["interval"]
-            range_len = steps.get("range", None)
-
-            if range_len is None:
-                for step in range(start_step, end_step + 1, interval):
+            if len(steps) == 3:
+                for step in range(steps[0], steps[1] + 1, steps[2]):
                     if step not in unique_steps:
                         unique_steps.add(step)
             else:

@@ -4,12 +4,9 @@ out_keys:
   bitsPerValue: 8
 members: 5
 parameters:
-  t850_131022:
-    target: "fdb:"
+  - target: "fdb:"
     steps:
-      - interval: 12
-        start_step: 120
-        end_step: 168 
+      - [120, 168, 12]
     windows:
       ranges:
         - [120, 120]
@@ -59,12 +56,9 @@ parameters:
           step:
             120: 132
             168: 180
-  t850_131023:
-    target: "fdb:"
+  - target: "fdb:"
     steps:
-      - interval: 12
-        start_step: 120
-        end_step: 168 
+      - [120, 168, 12]
     windows:
       ranges:
         - [120, 120]
@@ -101,12 +95,9 @@ parameters:
           step:
             120: 132
             168: 180
-  t850_131020:
-    target: "fdb:"
+  - target: "fdb:"
     steps:
-      - interval: 12
-        start_step: 120
-        end_step: 168 
+      - [120, 168, 12]
     windows:
       ranges:
         - [120, 168]
@@ -147,12 +138,9 @@ parameters:
             144: 156
             156: 168
             168: 180
-  t850_131021:
-    target: "fdb:"
+  - target: "fdb:"
     steps:
-      - interval: 12
-        start_step: 120
-        end_step: 168 
+      - [120, 168, 12]
     windows:
       ranges:
         - [120, 168]
@@ -193,12 +181,9 @@ parameters:
             144: 156
             156: 168
             168: 180
-  t850_133093:
-    target: "fdb:"
+  - target: "fdb:"
     steps:
-      - interval: 12
-        start_step: 120
-        end_step: 168 
+      - [120, 168, 12]
     windows:
       ranges:
         - [120, 120]
@@ -249,12 +234,9 @@ parameters:
             144: 156
             156: 168
             168: 180
-  t850_133094:
-    target: "fdb:"
+  - target: "fdb:"
     steps:
-      - interval: 12
-        start_step: 120
-        end_step: 168 
+      - [120, 168, 12]
     windows:
       ranges:
         - [120, 120]

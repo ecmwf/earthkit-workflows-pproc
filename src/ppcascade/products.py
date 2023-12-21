@@ -47,7 +47,7 @@ def _read(
 def ensemble_anomaly(args):
     config = Config(args)
     total_graph = Graph([])
-    for _, cfg in config.options["parameters"].items():
+    for cfg in config.options["parameters"]:
         param_config = ParamConfig(config.members, cfg, config.in_keys, config.out_keys)
         climatology = _read(
             param_config.clim_request(args.climatology), "step"
@@ -80,7 +80,7 @@ def ensemble_anomaly(args):
 def wind(args):
     config = Config(args)
     total_graph = Graph([])
-    for _, cfg in config.options["parameters"].items():
+    for cfg in config.options["parameters"]:
         param_config = WindConfig(config.members, cfg, config.in_keys, config.out_keys)
         requests, stream = param_config.forecast_request(args.ensemble)
         total_graph += (
@@ -104,7 +104,7 @@ def wind(args):
 def ensemble(args):
     config = Config(args)
     total_graph = Graph([])
-    for _, cfg in config.options["parameters"].items():
+    for cfg in config.options["parameters"]:
         param_config = ParamConfig(config.members, cfg, config.in_keys, config.out_keys)
         total_graph += (
             _read(param_config.forecast_request(args.ensemble))
@@ -127,7 +127,7 @@ def ensemble(args):
 def extreme(args):
     config = Config(args)
     total_graph = Graph([])
-    for _, cfg in config.options["parameters"].items():
+    for cfg in config.options["parameters"]:
         param_config = ExtremeConfig(
             config.members, cfg, config.in_keys, config.out_keys
         )

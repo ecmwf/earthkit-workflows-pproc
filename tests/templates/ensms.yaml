@@ -4,8 +4,7 @@ out_keys:
   bitsPerValue: 16
 members: 5
 parameters:
-  T:
-    target: fileset:cascade_{param}.grib
+  - target: fileset:cascade_{param}.grib
     defs:
       base_keys: &base_keys_T
         class: od
@@ -37,8 +36,7 @@ parameters:
         - [0, 6, 3]
     ensemble:
       operation: ensms
-  mn2t6:
-    target: fileset:cascade_{param}.grib
+  - target: fileset:cascade_{param}.grib
     defs:
       base_keys: &base_keys_mn2t6
         class: od
@@ -63,8 +61,7 @@ parameters:
       - [6, 12, 6]
     ensemble:
       operation: ensms
-  tp:
-    target: fileset:cascade_{param}.grib
+  - target: fileset:cascade_{param}.grib
     defs:
       base_keys: &base_keys_tp
         class: od

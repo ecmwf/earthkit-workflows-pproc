@@ -4,8 +4,7 @@ members:
   end: 5
   start: 1
 parameters:
-  tp:
-    target: "fileset:cascade_extreme_{param}.grib"
+  - target: "fileset:cascade_extreme_{param}.grib"
     ensemble:
       operation: extreme
       eps: 1e-4
@@ -65,8 +64,7 @@ parameters:
       - [12, 84, 72]
       operation: diff
       include_start_step: True
-  capeshear:
-    target: "fileset:cascade_extreme_{param}.grib"
+  - target: "fileset:cascade_extreme_{param}.grib"
     defs:
       base_keys: &base_keys_capeshear
         class: od

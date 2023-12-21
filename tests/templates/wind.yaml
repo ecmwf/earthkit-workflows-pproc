@@ -2,8 +2,7 @@ out_keys:
   mars.expver: '9078'
 members: 5
 parameters:
-  wind1:
-    target: fileset:wind_{step}_{stream}.grib
+  - target: fileset:wind_{step}_{stream}.grib
     param:
       operation: wind_speed
     defs:
@@ -39,8 +38,7 @@ parameters:
         bitsPerValue: 16
       ranges:
         - [0, 6, 3]
-  wind_vod2uv:
-    target: fileset:wind_{step}_{type}.grib
+  - target: fileset:wind_{step}_{type}.grib
     param:
       operation: wind_speed
     defs:
