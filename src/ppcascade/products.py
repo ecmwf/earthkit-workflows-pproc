@@ -29,10 +29,11 @@ def _read(
                 (new_request,),
                 kwargs,
             )
-        new_action = PProcFluent.source(
+        new_action = PProcFluent().source(
             payloads,
             dims={key: list(request[key]) for key in request.dims.keys()},
             name="retrieve",
+            append_unique_index=False,
         )
 
         if all_actions is None:

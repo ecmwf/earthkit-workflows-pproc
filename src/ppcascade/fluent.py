@@ -12,12 +12,11 @@ from cascade.fluent import Fluent
 from .io import cluster_write
 from .io import write as write_grib
 from .graph_config import WindowConfig, Range
-from .fieldlist_backend import NumpyFieldListBackend
 
 
 class SingleAction(BaseSingleAction):
     def to_multi(self, nodes: xr.DataArray):
-        return MultiAction(self, nodes)
+        return MultiAction(self, nodes, self.backend)
 
     def non_descript_dim(self, dim: str):
         """
@@ -38,7 +37,7 @@ class SingleAction(BaseSingleAction):
         num_steps = len(windows.ranges[0].steps)
         # Join with climatology and compute efi control
         payload = Payload(
-            NumpyFieldListBackend.efi,
+            self.backend.efi,
             (Node.input_name(1), Node.input_name(0), eps, num_steps),
             {"control": True},
         )
@@ -60,7 +59,7 @@ class SingleAction(BaseSingleAction):
         def _sot(action: Action, number: int) -> Action:
             new_sot = action.reduce(
                 Payload(
-                    NumpyFieldListBackend.sot,
+                    self.backend.sot,
                     (Node.input_name(1), Node.input_name(0), number, eps, num_steps),
                 )
             )
@@ -76,7 +75,7 @@ class SingleAction(BaseSingleAction):
     def cluster(self, config, ncomp_file, indexes, deterministic):
         return self.map(
             Payload(
-                NumpyFieldListBackend.cluster,
+                self.backend.cluster,
                 (config, Node.input_name(0), ncomp_file, indexes, deterministic),
             )
         )
@@ -102,8 +101,8 @@ class SingleAction(BaseSingleAction):
 class MultiAction(BaseMultiAction):
     def to_single(self, payload_or_node: Payload | Node):
         if isinstance(payload_or_node, Payload):
-            return SingleAction.from_payload(self, payload_or_node)
-        return SingleAction(self, payload_or_node)
+            return SingleAction.from_payload(self, payload_or_node, self.backend)
+        return SingleAction(self, payload_or_node, self.backend)
 
     def non_descript_dim(self, dim: str):
         """
@@ -118,7 +117,7 @@ class MultiAction(BaseMultiAction):
 
     def diff(self, dim: str = "", **method_kwargs):
         return self.reduce(
-            Payload(NumpyFieldListBackend.diff, kwargs=method_kwargs),
+            Payload(self.backend.diff, kwargs=method_kwargs),
             dim,
         )
 
@@ -192,7 +191,7 @@ class MultiAction(BaseMultiAction):
             num_steps = len(window.steps)
             ret = action.select({dim: window.name}).reduce(
                 Payload(
-                    NumpyFieldListBackend.efi,
+                    self.backend.efi,
                     (Node.input_name(1), Node.input_name(0), eps, num_steps),
                 ),
                 dim="**datatype**",
@@ -218,7 +217,7 @@ class MultiAction(BaseMultiAction):
             def _sot(action: Action, number: int) -> Action:
                 new_sot = action.reduce(
                     Payload(
-                        NumpyFieldListBackend.sot,
+                        self.backend.sot,
                         (
                             Node.input_name(1),
                             Node.input_name(0),
@@ -272,7 +271,7 @@ class MultiAction(BaseMultiAction):
         dim: str = "number",
     ):
         payload = Payload(
-            NumpyFieldListBackend.threshold,
+            self.backend.threshold,
             (
                 Node.input_name(0),
                 comparison,
@@ -304,9 +303,7 @@ class MultiAction(BaseMultiAction):
         self, num_quantiles: int = 100, dim: str = "number", new_dim: str = "quantile"
     ):
         def _quantiles(action, quantile):
-            payload = Payload(
-                NumpyFieldListBackend.quantiles, (Node.input_name(0), quantile)
-            )
+            payload = Payload(self.backend.quantiles, (Node.input_name(0), quantile))
             new_quantile = action.map(payload)
             new_quantile._add_dimension(new_dim, quantile)
             return new_quantile
@@ -319,9 +316,9 @@ class MultiAction(BaseMultiAction):
 
     def wind_speed(self, vod2uv: bool, dim: str = "param"):
         if vod2uv:
-            ret = self.map(Payload(NumpyFieldListBackend.norm, (Node.input_name(0),)))
+            ret = self.map(Payload(self.backend.norm, (Node.input_name(0),)))
         else:
-            ret = self.reduce(Payload(NumpyFieldListBackend.norm), dim)
+            ret = self.reduce(Payload(self.backend.norm), dim)
         return ret
 
     def param_operation(
@@ -332,9 +329,7 @@ class MultiAction(BaseMultiAction):
         if isinstance(operation, str):
             if hasattr(self, operation):
                 return getattr(self, operation)(dim=dim, **kwargs)
-            operation = Payload(
-                getattr(NumpyFieldListBackend, operation), kwargs=kwargs
-            )
+            operation = Payload(getattr(self.backend, operation), kwargs=kwargs)
         return self.reduce(operation, dim)
 
     def ensemble_operation(
@@ -345,9 +340,7 @@ class MultiAction(BaseMultiAction):
         if isinstance(operation, str):
             if hasattr(self, operation):
                 return getattr(self, operation)(dim=dim, **kwargs)
-            operation = Payload(
-                getattr(NumpyFieldListBackend, operation), kwargs=kwargs
-            )
+            operation = Payload(getattr(self.backend, operation), kwargs=kwargs)
         return self.reduce(operation, dim)
 
     def window_operation(self, windows: WindowConfig, dim: str = "step"):
@@ -371,7 +364,7 @@ class MultiAction(BaseMultiAction):
             raise NotImplementedError()
         return self.reduce(
             Payload(
-                NumpyFieldListBackend.pca,
+                self.backend.pca,
                 (config, Node.input_name(0), Node.input_name(1), mask, target),
             )
         )
@@ -379,7 +372,7 @@ class MultiAction(BaseMultiAction):
     def attribution(self, config, targets):
         def _attribution(action, scenario):
             payload = Payload(
-                NumpyFieldListBackend.attribution,
+                self.backend.attribution,
                 (config, scenario, Node.input_name(0), Node.input_name(1)),
             )
             attr = action.reduce(payload)
@@ -434,6 +427,14 @@ class MultiAction(BaseMultiAction):
         return self
 
 
+from .fieldlist_backend import NumpyFieldListBackend
+
+
 class PProcFluent(Fluent):
-    single_action: type = SingleAction
-    multi_action: type = MultiAction
+    def __init__(
+        self,
+        single_action=SingleAction,
+        multi_action=MultiAction,
+        backend=NumpyFieldListBackend,
+    ):
+        super().__init__(single_action, multi_action, backend)
