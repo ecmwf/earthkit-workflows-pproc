@@ -80,9 +80,6 @@ parameters:
           - <<: *base_keys_tp
             type: pf
     windows:
-      grib_set:
-        paramId: 200228
-        stepType: diff
       ranges:
         - [0, 6, 6]
         - [3, 9, 6]
@@ -91,3 +88,6 @@ parameters:
       include_start_step: True
     ensemble:
       operation: ensms
+    grib_set:
+      paramId: 200228
+      stepType: diff

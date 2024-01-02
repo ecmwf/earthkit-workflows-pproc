@@ -16,10 +16,10 @@ parameters:
       ranges:
         - [0, 24, 24]
         - [12, 36, 24]        
-      grib_set:
-        timeRangeIndicator: 5
-        stepType: diff 
-        paramId: 131060
+    grib_set:
+      timeRangeIndicator: 5
+      stepType: diff 
+      paramId: 131060
     sources:
       fdb:
         fc:
@@ -44,10 +44,10 @@ parameters:
       ranges:
         - [0, 24, 24]
         - [12, 36, 24]        
-      grib_set:
-        timeRangeIndicator: 5
-        stepType: diff 
-        paramId: 131061
+    grib_set:
+      timeRangeIndicator: 5
+      stepType: diff 
+      paramId: 131061
     sources:
       fdb:
         fc:
@@ -71,19 +71,19 @@ parameters:
       ranges:
         - [0, 24, 24]
         - [12, 36, 24]        
-      grib_set:
-        stepType: accum
-        stepRange: 0-0
-        edition: 2
-        scaleFactorOfLowerLimit: 0
-        probabilityType: 3
-        typeOfGeneratingProcess: 5
-        indicatorOfUnitForTimeIncrement: 1
-        timeIncrement: 12
-        packingType: grid_ccsds
-        scaleFactorOfUpperLimit: MISSING
-        scaledValueOfUpperLimit: MISSING
-        paramId: 131098
+    grib_set:
+      stepType: accum
+      stepRange: 0-0
+      edition: 2
+      scaleFactorOfLowerLimit: 0
+      probabilityType: 3
+      typeOfGeneratingProcess: 5
+      indicatorOfUnitForTimeIncrement: 1
+      timeIncrement: 12
+      packingType: grid_ccsds
+      scaleFactorOfUpperLimit: MISSING
+      scaledValueOfUpperLimit: MISSING
+      paramId: 131098
     sources:
       fdb:
         fc:
@@ -107,19 +107,19 @@ parameters:
       ranges:
         - [0, 24, 24]
         - [12, 36, 24]        
-      grib_set:
-        stepType: accum
-        stepRange: 0-0
-        edition: 2
-        scaleFactorOfLowerLimit: 0
-        probabilityType: 3
-        typeOfGeneratingProcess: 5
-        indicatorOfUnitForTimeIncrement: 1
-        timeIncrement: 12
-        packingType: grid_ccsds
-        scaleFactorOfUpperLimit: MISSING
-        scaledValueOfUpperLimit: MISSING
-        paramId: 131099
+    grib_set:
+      stepType: accum
+      stepRange: 0-0
+      edition: 2
+      scaleFactorOfLowerLimit: 0
+      probabilityType: 3
+      typeOfGeneratingProcess: 5
+      indicatorOfUnitForTimeIncrement: 1
+      timeIncrement: 12
+      packingType: grid_ccsds
+      scaleFactorOfUpperLimit: MISSING
+      scaledValueOfUpperLimit: MISSING
+      paramId: 131099
     sources:
       fdb:
         fc:
@@ -139,8 +139,8 @@ parameters:
       ranges:
         - [12, 24, 12]
       include_start_step: True
-      grib_set:
-        paramId: 131068
+    grib_set:
+      paramId: 131068
     ensemble:
       operation: threshold_prob
       comparison: ">="
@@ -164,8 +164,8 @@ parameters:
       ranges:
         - [12, 24, 12]
       include_start_step: True
-      grib_set:
-        paramId: 131069
+    grib_set:
+      paramId: 131069
     ensemble:
       operation: threshold_prob
       comparison: ">="
@@ -191,8 +191,8 @@ parameters:
         - [120, 168]
         - [120, 240]
         - [168, 240]
-      grib_set:
-        paramId: 131073
+    grib_set:
+      paramId: 131073
     ensemble:
       operation: threshold_prob
       comparison: "<="

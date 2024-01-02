@@ -1,7 +1,7 @@
 out_keys:
   type: ep
   localDefinitionNumber: 5
-  bitsPerValue: 8
+  bitsPerValue: 24
 members: 5
 parameters:
   - target: "fdb:"
@@ -11,9 +11,8 @@ parameters:
       ranges:
         - [120, 120]
         - [168, 168]
-      grib_set:
-        bitsPerValue: 24
-        paramId: 131022
+    grib_set:
+      paramId: 131022
     ensemble:
       operation: threshold_prob
       comparison: "<"
@@ -63,9 +62,8 @@ parameters:
       ranges:
         - [120, 120]
         - [168, 168]
-      grib_set:
-        bitsPerValue: 24
-        paramId: 131023
+    grib_set:
+      paramId: 131023
     ensemble:
       operation: threshold_prob
       comparison: "<"
@@ -103,9 +101,8 @@ parameters:
         - [120, 168]
       operation: 'mean'
       include_start_step: true
-      grib_set:
-        bitsPerValue: 24
-        paramId: 131020
+    grib_set:
+      paramId: 131020
     ensemble:
       operation: threshold_prob
       comparison: "<"
@@ -146,9 +143,8 @@ parameters:
         - [120, 168]
       operation: 'mean'
       include_start_step: true
-      grib_set:
-        bitsPerValue: 24
-        paramId: 131021
+    grib_set:
+      paramId: 131021
     ensemble:
       operation: threshold_prob
       comparison: ">="
@@ -190,18 +186,17 @@ parameters:
         - [132, 132]
         - [168, 168]
       std_anomaly: true
-      grib_set:
-        localDefinitionNumber: 30
-        bitsPerValue: 24
-        edition: 2
-        typeOfGeneratingProcess: 5
-        paramId: 133093
-        timeIncrement: 12
-        indicatorOfUnitForTimeIncrement: 1
-        typeOfStatisticalProcessing: 10
-        packingType: "grid_ccsds"
-        scaleFactorOfUpperLimit: 'MISSING'
-        scaledValueOfUpperLimit: 'MISSING'
+    grib_set:
+      localDefinitionNumber: 30
+      edition: 2
+      typeOfGeneratingProcess: 5
+      paramId: 133093
+      timeIncrement: 12
+      indicatorOfUnitForTimeIncrement: 1
+      typeOfStatisticalProcessing: 10
+      packingType: "grid_ccsds"
+      scaleFactorOfUpperLimit: 'MISSING'
+      scaledValueOfUpperLimit: 'MISSING'
     ensemble:
       operation: threshold_prob
       comparison: ">"
@@ -243,18 +238,17 @@ parameters:
         - [132, 132]
         - [168, 168]
       std_anomaly: true
-      grib_set:
-        localDefinitionNumber: 30
-        bitsPerValue: 24
-        edition: 2
-        typeOfGeneratingProcess: 5
-        paramId: 133094
-        timeIncrement: 12
-        indicatorOfUnitForTimeIncrement: 1
-        typeOfStatisticalProcessing: 10
-        packingType: "grid_ccsds"
-        scaleFactorOfUpperLimit: 'MISSING'
-        scaledValueOfUpperLimit: 'MISSING'
+    grib_set:
+      localDefinitionNumber: 30
+      edition: 2
+      typeOfGeneratingProcess: 5
+      paramId: 133094
+      timeIncrement: 12
+      indicatorOfUnitForTimeIncrement: 1
+      typeOfStatisticalProcessing: 10
+      packingType: "grid_ccsds"
+      scaleFactorOfUpperLimit: 'MISSING'
+      scaledValueOfUpperLimit: 'MISSING'
     ensemble:
       operation: threshold_prob
       comparison: ">"

@@ -346,7 +346,6 @@ class MultiAction(BaseMultiAction):
     def window_operation(self, windows: WindowConfig, dim: str = "step"):
         if windows.operation is None:
             self._squeeze_dimension(dim)
-            self.add_attributes(windows.grib_sets)
             return self
 
         def _window_operation(action: Action, range: Range) -> Action:
@@ -356,7 +355,6 @@ class MultiAction(BaseMultiAction):
             return window_action
 
         ret = self.transform(_window_operation, windows.ranges, dim)
-        ret.add_attributes(windows.grib_sets)
         return ret
 
     def pca(self, config, mask, target: str = None):

@@ -23,7 +23,6 @@ class WindowConfig:
     operation: str
     include_init: bool
     options: dict
-    grib_sets: dict
     ranges: list[Range] = field(default_factory=list)
 
     # TOOD: precomputed windows, how is their EFI computed?? Do we need num steps?
@@ -169,7 +168,7 @@ class Config(BaseConfig):
 
 class ParamConfig:
     def __init__(self, members, param_config, in_keys, out_keys):
-        param_options = param_config.copy()
+        param_options = copy.deepcopy(param_config)
         self.steps = self._generate_steps(param_options.pop("steps", []))
         self.sources = param_options.pop("sources")
         self.members = members
@@ -183,8 +182,9 @@ class ParamConfig:
             "kwargs": param_options.get("ensemble", {}),
         }
         self.target = param_options.pop("target")
-        self.out_keys = out_keys.copy()
-        self.in_keys = in_keys.copy()
+        self.out_keys = copy.deepcopy(out_keys)
+        self.out_keys.update(param_options.pop("grib_set", {}))
+        self.in_keys = copy.deepcopy(in_keys)
         self.options = param_options
 
     @classmethod
@@ -205,8 +205,7 @@ class ParamConfig:
         include_init = windows_config.pop("include_start_step", False)
         operation = windows_config.pop("operation", None)
         ranges = windows_config.pop("ranges")
-        grib_sets = windows_config.pop("grib_set", {})
-        window = WindowConfig(operation, include_init, windows_config, grib_sets)
+        window = WindowConfig(operation, include_init, windows_config)
         for r in ranges:
             window.add_range(*map(int, r), allowed_steps=self.steps)
         return window

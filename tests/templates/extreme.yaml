@@ -50,20 +50,20 @@ parameters:
             12-84: 0-72
             36-60: 24-48
     windows:
-      grib_set:
-        edition: 1
-        gribTablesVersionNo: 132
-        indicatorOfParameter: 228
-        localDefinitionNumber: 19
-        mars.expver: '9078'
-        timeRangeIndicator: 5
-        stepType: diff
       ranges:
       - [12, 36, 24]
       - [36, 60, 24]
       - [12, 84, 72]
       operation: diff
       include_start_step: True
+    grib_set:
+      edition: 1
+      gribTablesVersionNo: 132
+      indicatorOfParameter: 228
+      localDefinitionNumber: 19
+      mars.expver: '9078'
+      timeRangeIndicator: 5
+      stepType: diff
   - target: "fileset:cascade_extreme_{param}.grib"
     defs:
       base_keys: &base_keys_capeshear
@@ -113,16 +113,16 @@ parameters:
       comparison: <=
       threshold: 10
     windows:
-      grib_set:
-        param: 228035
-        typeOfStatisticalProcessing: 1
-        edition: 1
-        indicatorOfTypeOfLevel: 1
-        timeRangeIndicator: 2
-        indicatorOfParameter: 44
-        gribTablesVersionNo: 132
-        localDefinitionNumber: 19
-        mars.expver: '9078'
       ranges:
       - [12, 36, 6]
-      operation: maximum
+      operation: maximum      
+    grib_set:
+      param: 228035
+      typeOfStatisticalProcessing: 1
+      edition: 1
+      indicatorOfTypeOfLevel: 1
+      timeRangeIndicator: 2
+      indicatorOfParameter: 44
+      gribTablesVersionNo: 132
+      localDefinitionNumber: 19
+      mars.expver: '9078'

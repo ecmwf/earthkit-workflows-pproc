@@ -51,10 +51,10 @@ parameters:
     windows:
       operation: diff
       include_start_step: True
-      grib_set:
-        stepType: diff
-        paramId: 200228
       ranges:
         - [0, 6, 6]
         - [3, 9, 6]
+    grib_set:
+      stepType: diff
+      paramId: 200228
     target: "fileset:cascade_quantiles_{param}.grib"

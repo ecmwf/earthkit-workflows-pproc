@@ -32,12 +32,12 @@ parameters:
             interpolate: *base_interp
     windows:
       include_start_step: true
-      grib_set:
-        indicatorOfParameter: 207
-        gribTablesVersionNo: 128
-        bitsPerValue: 16
       ranges:
         - [0, 6, 3]
+    grib_set:
+      indicatorOfParameter: 207
+      gribTablesVersionNo: 128
+      bitsPerValue: 16
   - target: fileset:wind_{step}_{type}.grib
     param:
       operation: wind_speed
@@ -69,11 +69,11 @@ parameters:
             interpolate: *vod2uv_base_interp  
     windows:
       include_start_step: true
-      grib_set:
-        gribTablesVersionNo: 128
-        indicatorOfParameter: 10
-        bitsPerValue: 24
       ranges:
         - [0, 6, 3]
+    grib_set:
+      gribTablesVersionNo: 128
+      indicatorOfParameter: 10
+      bitsPerValue: 24
     ensemble:
       operation: ensms
