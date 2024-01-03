@@ -425,7 +425,7 @@ class MultiAction(BaseMultiAction):
         return self
 
 
-from .fieldlist_backend import NumpyFieldListBackend
+from .backend import NumpyFieldListBackend
 
 
 class PProcFluent(Fluent):

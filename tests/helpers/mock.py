@@ -1,17 +1,17 @@
 from cascade.fluent import Payload, Node
-from ppcascade import parsers
+from ppcascade.entry import parser
 
 
 def mock_args(config_path: str):
-    parser = parsers.basic_parser("Test", True, True)
-    return parser.parse_args(
+    test_parser = parser.basic_parser("Test", True, True)
+    return test_parser.parse_args(
         ["--config", config_path, "--ensemble", "fdb:fc", "--climatology", "fdb:clim"]
     )
 
 
 def mock_cluster_args(config_path: str):
-    parser = parsers.cluster_parser()
-    return parser.parse_args(
+    test_parser = parser.cluster_parser()
+    return test_parser.parse_args(
         [
             "--config",
             config_path,

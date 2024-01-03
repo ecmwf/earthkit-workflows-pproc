@@ -7,7 +7,7 @@ from cascade.fluent import Payload
 from .fluent import PProcFluent
 from .io import retrieve
 from .utils.request import Request, MultiSourceRequest
-from .graph_config import (
+from .config import (
     Config,
     ClusterConfig,
 )

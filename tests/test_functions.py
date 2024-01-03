@@ -5,7 +5,7 @@ import numpy as np
 from earthkit.data import FieldList
 from earthkit.data.core.metadata import RawMetadata
 
-from ppcascade.fieldlist_backend import NumpyFieldListBackend
+from ppcascade.backend import NumpyFieldListBackend
 
 
 class MockMetaData(RawMetadata):
