@@ -3,7 +3,7 @@ import yaml
 import copy
 
 
-from .parsemars import ComputeRequest, ProductType, MarsKey
+from .parsemars import ComputeRequest, ProductType, MarsKey, parse_request
 
 
 class ConfigDefaults:
@@ -100,6 +100,7 @@ class ProductConfig:
 
 class ExtremeConfig(ProductConfig):
     def add_param(
+        self,
         common: dict,
         param: dict,
         request: ComputeRequest,
@@ -117,6 +118,7 @@ class ExtremeConfig(ProductConfig):
 
 class QuantileConfig(ProductConfig):
     def add_param(
+        self,
         common: dict,
         param: dict,
         request: ComputeRequest,
@@ -203,7 +205,8 @@ class RequestTranslator:
         )
         return product, config_type(**prod_config)
 
-    def translate(self, requests: list[ComputeRequest]):
+    def translate(self, request_file: str):
+        requests = parse_request(request_file)
         config = {}
         for request in requests:
             product, prod_config = self._new_product(request.type)

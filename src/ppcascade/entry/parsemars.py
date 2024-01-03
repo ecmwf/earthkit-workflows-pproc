@@ -97,11 +97,14 @@ def parse_request(filename: str):
                 request_type = line.split(NEW_LINE)[0]
                 new_request = {}
             else:
-                key, value = line.split(KV_SEPARATOR)
-                new_request[key.lstrip(" ").lstrip("\t")] = value.rstrip("\n").split(
-                    NEW_LINE
-                )[0]
-                if NEW_LINE not in value:
+                kv_pairs = line.split(NEW_LINE)
+                for pair in kv_pairs:
+                    try:
+                        key, value = pair.split(KV_SEPARATOR)
+                        new_request[key.lstrip(" ").lstrip("\t")] = value.rstrip("\n")
+                    except ValueError:
+                        pass
+                if NEW_LINE not in line:
                     # Create request and append to requests
                     requests.extend(new_requests(request_type, new_request))
                     new_request = None
