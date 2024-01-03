@@ -11,7 +11,7 @@ from cascade.fluent import Fluent
 
 from .io import cluster_write
 from .io import write as write_grib
-from .graph_config import WindowConfig, Range
+from .utils.window import WindowConfig, Range
 
 
 class SingleAction(BaseSingleAction):

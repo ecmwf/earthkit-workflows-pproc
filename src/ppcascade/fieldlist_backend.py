@@ -13,7 +13,7 @@ from cascade.backends.base import BaseBackend
 
 from .grib import extreme_grib_headers, threshold_grib_headers
 from .wrappers.metadata import GribBufferMetaData
-from .patch import PatchModule
+from .utils.patch import PatchModule
 
 
 def standardise_output(data):

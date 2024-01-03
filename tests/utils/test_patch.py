@@ -4,7 +4,7 @@ import pytest
 
 from meteokit import extreme
 
-from ppcascade.patch import PatchModule
+from ppcascade.utils.patch import PatchModule
 
 
 def test_patch_extreme():
