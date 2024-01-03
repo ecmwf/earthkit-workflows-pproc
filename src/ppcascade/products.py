@@ -8,9 +8,6 @@ from .fluent import PProcFluent
 from .io import retrieve
 from .graph_config import (
     Config,
-    ParamConfig,
-    WindConfig,
-    ExtremeConfig,
     ClusterConfig,
     Request,
     MultiSourceRequest,
@@ -47,8 +44,7 @@ def _read(
 def ensemble_anomaly(args):
     config = Config(args)
     total_graph = Graph([])
-    for cfg in config.options["parameters"]:
-        param_config = ParamConfig(config.members, cfg, config.in_keys, config.out_keys)
+    for param_config in config.parameters:
         climatology = _read(
             param_config.clim_request(args.climatology), "step"
         )  # Will contain type em and es
@@ -77,37 +73,16 @@ def ensemble_anomaly(args):
     return deduplicate_nodes(total_graph)
 
 
-def wind(args):
-    config = Config(args)
-    total_graph = Graph([])
-    for cfg in config.options["parameters"]:
-        param_config = WindConfig(config.members, cfg, config.in_keys, config.out_keys)
-        requests, stream = param_config.forecast_request(args.ensemble)
-        total_graph += (
-            _read(requests, stream=stream)
-            .param_operation(
-                param_config.param["operation"], **param_config.param["kwargs"]
-            )
-            .window_operation(param_config.windows)
-            .ensemble_operation(
-                param_config.ensemble["operation"], **param_config.ensemble["kwargs"]
-            )
-            .write(
-                param_config.target,
-                {**param_config.out_keys},
-            )
-            .graph()
-        )
-    return deduplicate_nodes(total_graph)
-
-
 def ensemble(args):
     config = Config(args)
     total_graph = Graph([])
-    for cfg in config.options["parameters"]:
-        param_config = ParamConfig(config.members, cfg, config.in_keys, config.out_keys)
+    for param_config in config.parameters:
+        requests = param_config.forecast_request(args.ensemble)
+        stream = False
+        if isinstance(requests, tuple):
+            requests, stream = requests
         total_graph += (
-            _read(param_config.forecast_request(args.ensemble))
+            _read(requests, stream=stream)
             .param_operation(
                 param_config.param["operation"], **param_config.param["kwargs"]
             )
@@ -127,10 +102,7 @@ def ensemble(args):
 def extreme(args):
     config = Config(args)
     total_graph = Graph([])
-    for cfg in config.options["parameters"]:
-        param_config = ExtremeConfig(
-            config.members, cfg, config.in_keys, config.out_keys
-        )
+    for param_config in config.parameters:
         climatology = _read(
             param_config.clim_request(args.climatology, True, no_expand=("quantile"))
         )
@@ -187,4 +159,4 @@ def clustereps(args):
     return deduplicate_nodes(total_graph)
 
 
-GRAPHS = [ensemble_anomaly, ensemble, wind, extreme, clustereps]
+GRAPHS = [ensemble_anomaly, ensemble, extreme, clustereps]

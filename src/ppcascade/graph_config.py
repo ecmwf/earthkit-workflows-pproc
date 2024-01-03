@@ -157,13 +157,29 @@ class Config(BaseConfig):
         super().__init__(args)
 
         if isinstance(self.options["members"], dict):
-            self.members = range(
+            members = range(
                 self.options["members"]["start"], self.options["members"]["end"] + 1
             )
         else:
-            self.members = range(1, int(self.options["members"]) + 1)
-        self.out_keys = self.options.pop("out_keys", {})
-        self.in_keys = self.options.pop("in_keys", {})
+            members = range(1, int(self.options["members"]) + 1)
+        out_keys = self.options.pop("out_keys", {})
+        in_keys = self.options.pop("in_keys", {})
+        self.parameters = [
+            new_param_config(members, cfg, in_keys, out_keys)
+            for cfg in self.options.pop("parameters", [])
+        ]
+
+
+def new_param_config(members, param_config, in_keys, out_keys):
+    if param_config.get("param", {}).get("operation", None) == "wind_speed":
+        return WindParamConfig(members, param_config, in_keys, out_keys)
+    if param_config.get("ensemble", {}).get("operation", None) in [
+        "efi",
+        "sot",
+        "extreme",
+    ]:
+        return ExtremeParamConfig(members, param_config, in_keys, out_keys)
+    return ParamConfig(members, param_config, in_keys, out_keys)
 
 
 class ParamConfig:
@@ -258,7 +274,7 @@ class ParamConfig:
         return [clim_req]
 
 
-class WindConfig(ParamConfig):
+class WindParamConfig(ParamConfig):
     def vod2uv(self, fc: str) -> bool:
         _, reqs = _source_from_location(fc, self.sources)
         return reqs[0].get("interpolate", {}).get("vod2uv", "0") == "1"
@@ -270,7 +286,7 @@ class WindConfig(ParamConfig):
         return super().forecast_request(fc, no_expand), not vod2uv
 
 
-class ExtremeConfig(ParamConfig):
+class ExtremeParamConfig(ParamConfig):
     def clim_request(
         self, clim: str, accumulated: bool = False, no_expand: tuple[str] = ()
     ):
