@@ -1,0 +1,108 @@
+from dataclasses import dataclass
+import copy
+
+# Request formatting symbols
+LIST_SEPARATOR = "/"
+KV_SEPARATOR = "="
+NEW_LINE = ","
+RANGE_INDICATOR = "to"
+
+
+class RequestType:
+    COMPUTE = "compute"
+
+
+class ProductType:
+    PERTURBED_FORECAST = "pf"
+    CTRL_FORECAST = "cf"
+    DET_FORECAST = "fc"
+    ENS_MEAN = "em"
+    ENS_STD = "es"
+    EFI = "efi"
+    EFI_CONTROL = "efic"
+    SOT = "sot"
+    QUANTILES = "pb"
+    EVENT_PROB = "ep"
+
+
+class MarsKey:
+    PARAM = "param"
+    TYPE = "type"
+    STEP = "step"
+    GRID = "grid"
+    TARGET = "target"
+    EXPVER = "expver"
+    STREAM = "stream"
+    DATE = "date"
+    TIME = "time"
+    NUMBER = "number"
+    LEVTYPE = "levtype"
+    LEVELIST = "levelist"
+    CLASS = "class"
+    DOMAIN = "domain"
+
+
+@dataclass
+class ComputeRequest:
+    param: str
+    type: str
+    steps: list
+    grid: str
+    target: str
+    base_request: dict
+
+
+def expand(value_list):
+    if RANGE_INDICATOR in value_list:
+        interval_range = value_list.split(LIST_SEPARATOR)
+        if len(interval_range) == 3:
+            start, _, end = interval_range
+            return [int(start), int(end)]
+        start, _, end, _, interval = interval_range
+        return [int(start), int(end), int(interval)]
+    return value_list.split(LIST_SEPARATOR)
+
+
+def format_request(request):
+    ret = copy.deepcopy(request)
+    for k, v in ret.items():
+        if LIST_SEPARATOR in v or k in [MarsKey.PARAM, MarsKey.TYPE]:
+            ret[k] = expand(v)
+    return ret
+
+
+def new_requests(request_type: str, request: dict):
+    mod_request = format_request(request)
+    params = mod_request.pop(MarsKey.PARAM)
+    grid = mod_request.pop(MarsKey.GRID, None)
+    steps = mod_request.pop(MarsKey.STEP)
+    target = mod_request.pop(MarsKey.TARGET)
+    if request_type == RequestType.COMPUTE:
+        types = mod_request.pop(MarsKey.TYPE)
+        for param in params:
+            for type in types:
+                yield ComputeRequest(param, type, steps, grid, target, mod_request)
+    else:
+        raise ValueError(
+            f"Unknown request type {request_type}. Expected one of {RequestType}"
+        )
+
+
+def parse_request(filename: str):
+    requests = []
+    with open(filename, "r") as file:
+        new_request = None
+        for line in file:
+            if new_request is None:
+                request_type = line.split(NEW_LINE)[0]
+                new_request = {}
+            else:
+                key, value = line.split(KV_SEPARATOR)
+                new_request[key.lstrip(" ").lstrip("\t")] = value.rstrip("\n").split(
+                    NEW_LINE
+                )[0]
+                if NEW_LINE not in value:
+                    # Create request and append to requests
+                    requests.extend(new_requests(request_type, new_request))
+                    new_request = None
+    return requests

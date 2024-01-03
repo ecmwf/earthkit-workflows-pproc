@@ -1,0 +1,473 @@
+global:
+  members:
+    end: 5
+    start: 1
+common:
+  interpolate:
+    intgrid: none
+    legendre-loader: shmem
+    matrix-loader: file-io
+  sources:
+    fdb:
+      ens: {}
+params:  
+  207:
+    param:
+      id: [165, 166]
+      operation: norm
+    grib_set:
+      indicatorOfParameter: 207
+      gribTablesVersionNo: 128
+  228249:
+    param: 
+      id: [228246, 228247]
+      operation: norm
+    grib_set:
+      indicatorOfParameter: 249
+      gribTablesVersionNo: 228
+  200228:
+    param:
+      id: 228
+    grib_set:
+      stepType: diff
+      timeRangeIndicator: 5
+    windows:
+      operation: diff
+      include_start_step: True
+  260048:
+    param:
+      id: 260048
+      scale: 3600
+  260050:
+    param:
+      id: [228219, 228221]
+      operation: sum
+      scale: 3600
+    grib_set:
+      paramId: 228221
+  260033:
+    param:
+      id: [228220, 228218]
+      operation: sum
+      scale: 3600
+    grib_set:
+      edition: 2
+      shortName: tprate
+  260053:
+    param:
+      id: [228220, 228221]
+      operation: sum
+      scale: 3600
+    grib_set:
+      edition: 2
+      shortName: tprate
+  # 228:
+  #   param:
+  #     id: 228
+  #   grib_set:
+  #     paramId: 200228
+  #     stepType: diff
+  #   windows:
+  #     operation: diff
+  #     include_start_step: True
+  10:
+    param:
+      id: [138, 155]
+      operation: wind_speed
+    interpolate:
+      vod2uv: "1"
+    grib_set:
+      gribTablesVersionNo: 128
+      indicatorOfParameter: 10
+products:
+  ensms:
+    global:
+      out_keys:
+        perturbationNumber: 0
+        bitsPerValue: 16
+    common:
+      sources:
+        fdb:
+          ens:
+            - type: pf
+            - type: cf
+      ensemble:
+        operation:
+          em: mean
+          es: std
+  prob:
+    global:
+      out_keys:
+        type: ep
+        localDefinitionNumber: 5
+        bitsPerValue: 8
+    common:
+      sources:
+        fdb:
+          ens:
+            type: pf
+    params:
+      131060: 
+        param: 
+          id: 228
+        windows:
+          operation: 'diff'
+          include_start_step: True
+        ensemble:
+          operation: threshold_prob
+          comparison: ">="
+          value: 0.001
+          localDecimalScaleFactor: 3
+        grib_set:
+          timeRangeIndicator: 5
+          stepType: diff 
+      131061:
+        param: 
+          id: 228
+        windows:
+          operation: 'diff'
+          include_start_step: True
+        ensemble:
+          operation: threshold_prob
+          comparison: ">="
+          value: 0.005
+          localDecimalScaleFactor: 3
+        grib_set:
+          timeRangeIndicator: 5
+          stepType: diff 
+      131062: 
+        param: 
+          id: 228
+        windows:
+          operation: 'diff'
+          include_start_step: True
+        ensemble:
+          operation: threshold_prob
+          comparison: ">="
+          value: 0.01
+          localDecimalScaleFactor: 3
+        grib_set:
+          timeRangeIndicator: 5
+          stepType: diff 
+      131063:
+        param: 
+          id: 228
+        windows:
+          operation: 'diff'
+          include_start_step: True
+        ensemble:
+          operation: threshold_prob
+          comparison: ">="
+          value: 0.02
+          localDecimalScaleFactor: 3
+        grib_set:
+          timeRangeIndicator: 5
+          stepType: diff 
+      131064:
+        param: 
+          id: 228
+        windows:
+          operation: 'diff'
+          include_start_step: True
+        ensemble:
+          operation: threshold_prob
+          comparison: "<"
+          value: 0.0001
+          localDecimalScaleFactor: 4
+        grib_set:
+          timeRangeIndicator: 5
+          stepType: diff 
+      131065:
+        param: 
+          id: 228
+        windows:
+          operation: 'diff'
+          include_start_step: True
+        ensemble:
+          operation: threshold_prob
+          comparison: "<"
+          value: 0.001
+          localDecimalScaleFactor: 4
+        grib_set:
+          timeRangeIndicator: 5
+          stepType: diff 
+      131066:
+        param: 
+          id: 228
+        windows:
+          operation: 'diff'
+          include_start_step: True
+        ensemble:
+          operation: threshold_prob
+          comparison: ">="
+          value: 0.003
+          localDecimalScaleFactor: 4
+        grib_set:
+          timeRangeIndicator: 5
+          stepType: diff 
+      131067:
+        param: 
+          id: 228
+        windows:
+          operation: 'diff'
+          include_start_step: True
+        ensemble:
+          operation: threshold_prob
+          comparison: ">="
+          value: 0.005
+          localDecimalScaleFactor: 4
+        grib_set:
+          timeRangeIndicator: 5
+          stepType: diff 
+      131098:
+        param: 
+          id: 228
+        windows: 
+          operation: 'diff'
+          include_start_step: True
+        ensemble:
+          operation: threshold_prob
+          comparison: ">="
+          value: 0.025
+          stepType: accum
+        grib_set:
+          stepRange: 0-0
+          edition: 2
+          scaleFactorOfLowerLimit: 0
+          probabilityType: 3
+          typeOfGeneratingProcess: 5
+          indicatorOfUnitForTimeIncrement: 1
+          timeIncrement: 12
+          packingType: grid_ccsds
+          scaleFactorOfUpperLimit: MISSING
+          scaledValueOfUpperLimit: MISSING
+      131099:
+        param: 
+          id: 228
+        windows: 
+          operation: 'diff'
+          include_start_step: True
+        ensemble:
+          operation: threshold_prob
+          comparison: ">="
+          value: 0.05
+          stepType: accum
+        grib_set: 
+          stepRange: 0-0
+          edition: 2
+          scaleFactorOfLowerLimit: 0
+          probabilityType: 3
+          typeOfGeneratingProcess: 5
+          indicatorOfUnitForTimeIncrement: 1
+          timeIncrement: 12
+          packingType: grid_ccsds
+          scaleFactorOfUpperLimit: MISSING
+          scaledValueOfUpperLimit: MISSING  
+      131085:
+        param: 
+          id: 228
+        windows: 
+          operation: 'diff'
+          include_start_step: True
+        ensemble:
+          operation: threshold_prob
+          comparison: ">="
+          value: 0.1
+          stepType: accum
+        grib_set: 
+          stepRange: 0-0
+          edition: 2
+          scaleFactorOfLowerLimit: 0
+          probabilityType: 3
+          typeOfGeneratingProcess: 5
+          indicatorOfUnitForTimeIncrement: 1
+          timeIncrement: 12
+          packingType: grid_ccsds
+          scaleFactorOfUpperLimit: MISSING
+          scaledValueOfUpperLimit: MISSING  
+      131068:
+        param: 
+          id: [165, 166]
+          operation: 'norm'
+        ensemble:
+          operation: threshold_prob
+          comparison: ">="
+          value: 10
+      131069:
+        param: 
+          id: [165, 166]
+          operation: 'norm'
+        ensemble:
+          operation: threshold_prob
+          comparison: ">="
+          value: 15
+      131073:
+        param: 
+          id: 122
+        ensemble:
+          operation: threshold_prob
+          comparison: "<="
+          value: 273.15
+          localDecimalScaleFactor: 2
+        steps:
+          - [126, 240, 6]
+        windows: 
+          operation: minimum
+      131070:
+        param:
+          id: 123
+        steps: 
+          - [6, 240, 6]
+        ensemble:
+          operation: threshold_prob
+          comparison: '>='
+          value: 15
+      131071:
+        param:
+          id: 123
+        steps: 
+          - [6, 240, 6]
+        ensemble:
+          operation: threshold_prob
+          comparison: '>='
+          value: 20
+      131072:
+        param:
+          id: 123
+        steps: 
+          - [6, 240, 6]
+        ensemble:
+          operation: threshold_prob
+          comparison: '>='
+          value: 25
+      131100:
+        param:
+          id: 123
+        steps: 
+          - [6, 240, 6]
+        ensemble:
+          operation: threshold_prob
+          comparison: '>='
+          value: 10
+        grib_set:
+          edition: 2
+          indicatorOfUnitForTimeIncrement: 1
+          packingType: grid_ccsds
+          productDefinitionTemplateNumber: 9
+          scaleFactorOfUpperLimit: MISSING
+          scaledValueOfUpperLimit: MISSING
+          timeIncrement: 12
+          typeOfGeneratingProcess: 5
+          typeOfTimeIncrement: 2
+      131074:
+        param:
+          id: 140229
+        steps:
+          - [12, 240, 12]
+          - [123, 144, 3]
+          - [150, 240, 6]
+        grib_set:
+          timeRangeIndicator: 0
+        ensemble:
+          operation: threshold_prob
+          comparison: '>='
+          value: 2
+      131075:
+        param:
+          id: 140229
+        steps:
+          - [12, 240, 12]
+          - [123, 144, 3]
+          - [150, 240, 6]
+        ensemble:
+          operation: threshold_prob
+          comparison: '>='
+          value: 4
+      131076:
+        param:
+          id: 140229
+        steps:
+          - [12, 240, 12]
+          - [123, 144, 3]
+          - [150, 240, 6]
+        ensemble:
+          operation: threshold_prob
+          comparison: '>='
+          value: 6
+      131077:
+        param:
+          id: 140229
+        steps:
+          - [12, 240, 12]
+          - [123, 144, 3]
+          - [150, 240, 6]
+        ensemble:
+          operation: threshold_prob
+          comparison: '>='
+          value: 8
+  quantiles:
+    global:
+      out_keys:
+        type: "pb"
+    common:
+      sources:
+        fdb:
+          ens:
+            - type: pf
+            - type: cf
+      ensemble: 
+        operation: quantiles
+  extreme:
+    global:
+      out_keys:
+        bitsPerValue: 12
+    common:
+      sources:
+        fdb:
+          ens:
+            - type: pf
+            - type: cf
+          clim:
+            stream: efhs
+            type: cd
+            quantile: 100
+      ensemble:
+        operation: 
+          efi: efi
+          sot: sot
+          efic: efi
+        eps: 1e-4
+    params:
+      132228:
+        param: 
+          id: 228
+        grib_set:
+          edition: 1
+          gribTablesVersionNo: 132
+          indicatorOfParameter: 228
+          localDefinitionNumber: 19
+          timeRangeIndicator: 5
+          stepType: diff
+        windows:
+          operation: diff
+          include_start_step: True
+      132044:
+        param:
+          id: [228036, 228035]
+          operation: filter
+          comparison: <=
+          threshold: 10
+        sources:
+          clim:
+            param: 228044
+        grib_set:
+          param: 228035
+          typeOfStatisticalProcessing: 1
+          edition: 1
+          indicatorOfTypeOfLevel: 1
+          timeRangeIndicator: 2
+          indicatorOfParameter: 44
+          gribTablesVersionNo: 132
+          localDefinitionNumber: 19
+        windows:
+          operation: maximum

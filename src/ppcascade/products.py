@@ -69,7 +69,7 @@ def ensemble_anomaly(args):
             )
             .write(
                 param_config.target,
-                {**param_config.out_keys},
+                param_config.out_keys,
             )
             .graph()
         )
@@ -117,7 +117,7 @@ def ensemble(args):
             )
             .write(
                 param_config.target,
-                {**param_config.out_keys},
+                param_config.out_keys,
             )
             .graph()
         )
@@ -148,7 +148,7 @@ def extreme(args):
             )
             .write(
                 param_config.target,
-                {**param_config.out_keys},
+                param_config.out_keys,
             )
             .graph()
         )
