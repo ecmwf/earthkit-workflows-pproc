@@ -2,33 +2,10 @@ import pytest
 import os
 
 from cascade.cascade import Cascade
-from cascade.graph import pyvis
 
 from helpers.mock import mock_args, mock_cluster_args
 
 ROOT_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)))
-
-
-def node_info_ext(sinks, node):
-    info = pyvis.node_info(node)
-    info["color"] = "#648FFF"
-    if not node.inputs:
-        info["shape"] = "diamond"
-        info["color"] = "#DC267F"
-    elif node in sinks:
-        info["shape"] = "triangle"
-        info["color"] = "#FFB000"
-    if node.payload is not None:
-        t = []
-        if "title" in info:
-            t.append(info["title"])
-        func, *args = node.payload
-        t.append(f"Function: {func}")
-        if args:
-            t.append("Arguments:")
-            t.extend(f"- {arg!r}" for arg in args)
-        info["title"] = "\n".join(t)
-    return info
 
 
 @pytest.mark.parametrize(

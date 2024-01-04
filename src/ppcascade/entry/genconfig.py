@@ -15,6 +15,8 @@ class ConfigDefaults:
 
 
 class ProductConfig:
+    graph_product = "ensemble"
+
     def __init__(self, members: str | dict, in_keys: dict = {}, out_keys: dict = {}):
         self._members = members
         self.in_keys = in_keys
@@ -99,6 +101,8 @@ class ProductConfig:
 
 
 class ExtremeConfig(ProductConfig):
+    graph_product = "extreme"
+
     def add_param(
         self,
         common: dict,

@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 import copy
 
 # Request formatting symbols
@@ -45,14 +44,25 @@ class MarsKey:
     DOMAIN = "domain"
 
 
-@dataclass
 class ComputeRequest:
-    param: str
-    type: str
-    steps: list
-    grid: str
-    target: str
-    base_request: dict
+    def __init__(
+        self,
+        param: str,
+        param_type: str,
+        steps: list,
+        grid: str,
+        target: str,
+        base_request: dict,
+    ):
+        self.param = param
+        self.type = param_type
+        if isinstance(steps[0], int):
+            self.steps = [steps]
+        else:
+            self.steps = [x.split("-") if "-" in x else [x, x] for x in steps]
+        self.grid = grid
+        self.target = target
+        self.base_request = base_request
 
 
 def expand(value_list):
@@ -69,6 +79,8 @@ def expand(value_list):
 def format_request(request):
     ret = copy.deepcopy(request)
     for k, v in ret.items():
+        if k == MarsKey.TARGET:
+            continue
         if LIST_SEPARATOR in v or k in [MarsKey.PARAM, MarsKey.TYPE]:
             ret[k] = expand(v)
     return ret

@@ -49,7 +49,7 @@ def ensemble_anomaly(args):
         )  # Will contain type em and es
 
         total_graph += (
-            _read(param_config.forecast_request(args.ensemble))
+            _read(param_config.forecast_request(args.forecast))
             .param_operation(
                 param_config.param["operation"], **param_config.param["kwargs"]
             )
@@ -76,7 +76,7 @@ def ensemble(args):
     config = Config(args)
     total_graph = Graph([])
     for param_config in config.parameters:
-        requests = param_config.forecast_request(args.ensemble)
+        requests = param_config.forecast_request(args.forecast)
         stream = False
         if isinstance(requests, tuple):
             requests, stream = requests
@@ -106,7 +106,7 @@ def extreme(args):
             param_config.clim_request(args.climatology, True, no_expand=("quantile"))
         )
         total_graph += (
-            _read(param_config.forecast_request(args.ensemble))
+            _read(param_config.forecast_request(args.forecast))
             .param_operation(
                 param_config.param["operation"], **param_config.param["kwargs"]
             )

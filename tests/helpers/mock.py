@@ -3,9 +3,9 @@ from ppcascade.entry import parser
 
 
 def mock_args(config_path: str):
-    test_parser = parser.basic_parser("Test", True, True)
+    test_parser = parser.basic_parser("Test", True)
     return test_parser.parse_args(
-        ["--config", config_path, "--ensemble", "fdb:fc", "--climatology", "fdb:clim"]
+        ["--config", config_path, "--forecast", "fdb:fc", "--climatology", "fdb:clim"]
     )
 
 

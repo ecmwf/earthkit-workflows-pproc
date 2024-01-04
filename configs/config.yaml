@@ -10,6 +10,8 @@ common:
   sources:
     fdb:
       ens: {}
+    mars:
+      ens: {}
 params:  
   207:
     param:
@@ -91,6 +93,10 @@ products:
           ens:
             - type: pf
             - type: cf
+        mars:
+          ens:
+            - type: pf
+            - type: cf
       ensemble:
         operation:
           em: mean
@@ -104,6 +110,9 @@ products:
     common:
       sources:
         fdb:
+          ens:
+            type: pf
+        mars:
           ens:
             type: pf
     params:
@@ -415,6 +424,10 @@ products:
           ens:
             - type: pf
             - type: cf
+        mars:
+          ens:
+            - type: pf
+            - type: cf
       ensemble: 
         operation: quantiles
   extreme:
@@ -424,6 +437,14 @@ products:
     common:
       sources:
         fdb:
+          ens:
+            - type: pf
+            - type: cf
+          clim:
+            stream: efhs
+            type: cd
+            quantile: 100
+        mars:
           ens:
             - type: pf
             - type: cf
