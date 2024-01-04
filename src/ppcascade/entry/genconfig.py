@@ -195,10 +195,21 @@ class RequestTranslator:
             product = "prob"
         elif prod_type == ProductType.QUANTILES:
             product, config_type = "quantiles", QuantileConfig
-        elif prod_type == [ProductType.ENS_MEAN, ProductType.ENS_STD]:
+        elif prod_type in [ProductType.ENS_MEAN, ProductType.ENS_STD]:
             product, config_type = "ensms", EnsmsConfig
+        elif prod_type in [
+            ProductType.CLUSTER_MEAN,
+            ProductType.CLUSTER_REP,
+            ProductType.CLUSTER_STD,
+        ]:
+            raise NotImplementedError()
         else:
-            product = "forecast", ForecastConfig
+            assert prod_type in [
+                ProductType.DET_FORECAST,
+                ProductType.CTRL_FORECAST,
+                ProductType.PERTURBED_FORECAST,
+            ]
+            product, config_type = "forecast", ForecastConfig
         prod_config = copy.deepcopy(self.config_defaults.base["global"])
         prod_config.update(
             self.config_defaults.products.get(product, {}).get("global", {})

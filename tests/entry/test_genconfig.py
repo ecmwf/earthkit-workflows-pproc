@@ -23,21 +23,23 @@ def generate_request(param: int, param_type: str, extra_keys: str):
 
 
 @pytest.mark.parametrize(
-    "param, param_type, extra_keys",
+    "param, param_type, extra_keys, prod",
     [
-        [130, "em/es", ""],
-        [10, "fc/cf", ""],
-        [10, "pf", "number=1/to/5"],
-        [131060, "ep", ""],
-        [132228, "efi/efic", ""],
-        [132228, "sot", "number=10/90,"],
-        [130, "pb", "quantile=100,"],
+        [130, "em/es", "", "ensms"],
+        [10, "fc/cf", "", "forecast"],
+        [10, "pf", "number=1/to/5", "forecast"],
+        [131060, "ep", "", "prob"],
+        [132228, "efi/efic", "", "extreme"],
+        [132228, "sot", "number=10/90,", "extreme"],
+        [130, "pb", "quantile=100,", "quantiles"],
     ],
 )
-def test_config_generation(generate_request, request, tmpdir):
+def test_config_generation(generate_request, prod, request, tmpdir):
     conf = RequestTranslator(f"{request.config.rootpath}/configs/config.yaml")
     request_file = f"{tmpdir}/request"
     with open(request_file, "w") as f:
         f.write(generate_request)
-    for product, prod_conf in conf.translate(request_file).items():
-        prod_conf.to_yaml(f"{tmpdir}/test_{product}.yaml")
+
+    products = conf.translate(request_file)
+    assert len(products) == 1
+    assert list(products.keys())[0] == prod

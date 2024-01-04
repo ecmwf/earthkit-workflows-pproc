@@ -23,6 +23,9 @@ class ProductType:
     SOT = "sot"
     QUANTILES = "pb"
     EVENT_PROB = "ep"
+    CLUSTER_MEAN = "cm"
+    CLUSTER_REP = "cr"
+    CLUSTER_STD = "cs"
 
 
 class MarsKey:
