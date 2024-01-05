@@ -1,7 +1,10 @@
 from typing import Any
 import yaml
 import copy
+import bisect
 
+
+from datetime import datetime, timedelta
 
 from .parsemars import ComputeRequest, ProductType, MarsKey, parse_request
 
@@ -49,9 +52,17 @@ class ProductConfig:
         config.setdefault("windows", {})
         config.setdefault("grib_set", {})
 
-        config["windows"]["ranges"] = request.steps
-        if request.grid is not None:
-            request.base_request["interpolate"] = {"grid": request.grid, **base_interp}
+        if config["windows"].get("operation", None) == "diff":
+            config["windows"]["ranges"] = [
+                [int(x[0]), int(x[1]), int(x[1]) - int(x[0])] for x in request.steps
+            ]
+        else:
+            config["windows"]["ranges"] = request.steps
+        if request.grid is not None or request.base_request[MarsKey.LEVTYPE] == "pl":
+            interpolation_keys = copy.deepcopy(base_interp)
+            if request.grid is not None:
+                interpolation_keys["grid"] = request.grid
+            request.base_request["interpolate"] = interpolation_keys
         config["sources"] = self._create_sources(
             param_id, config.pop("sources", {}), request.base_request
         )
@@ -117,7 +128,63 @@ class ExtremeConfig(ProductConfig):
             deep_update(
                 updates, {"ensemble": {"sot": request.base_request.pop(MarsKey.NUMBER)}}
             )
+        for src in common["sources"].keys():
+            deep_update(
+                param,
+                {
+                    "sources": {
+                        src: {
+                            "clim": {
+                                "date": ExtremeConfig.clim_date(
+                                    request.base_request[MarsKey.DATE]
+                                ),
+                                "step": {
+                                    f"{x[0]}-{x[1]}": ExtremeConfig.clim_step(
+                                        x, request.base_request[MarsKey.TIME]
+                                    )
+                                    for x in request.steps
+                                },
+                            }
+                        }
+                    }
+                },
+            )
         super().add_param(common, param, request, updates)
+
+    @staticmethod
+    def clim_date(date_str: str):
+        date = datetime.strptime(date_str, "%Y%m%d%H")
+        weekday = date.weekday()
+        # friday to monday -> take previous monday clim, else previous thursday clim
+        if weekday == 0 or weekday > 3:
+            clim_date = date - timedelta(days=(weekday + 4) % 7)
+        else:
+            clim_date = date - timedelta(days=weekday)
+        return clim_date.strftime("%Y%m%d")
+
+    @staticmethod
+    def clim_window_starts(extended: bool = False):
+        if extended:
+            return [0, 96, 168, 264, 336, 432, 504, 600, 672, 768, 840, 936]
+        return list(range(0, 217, 12))
+
+    @staticmethod
+    def clim_step(interval, time: str, extended: bool = False):
+        start, end = map(int, interval)
+        clim_relative_time = start + int(time)
+        if time == "12":
+            clim_relative_time = start - int(time)
+        if end < 240 or extended:
+            clim_windows = ExtremeConfig.clim_window_starts(extended)
+            nearest_clim_window = bisect.bisect_right(clim_windows, clim_relative_time)
+            clim_window_start = clim_windows[nearest_clim_window - 1]
+            if (nearest_clim_window <= (len(clim_windows) - 1)) and (
+                (clim_windows[nearest_clim_window] - clim_relative_time)
+                < (clim_relative_time - clim_window_start)
+            ):
+                clim_window_start = clim_windows[nearest_clim_window]
+            return f"{clim_window_start}-{clim_window_start + (end - start)}"
+        return f"{start}-{end}"
 
 
 class QuantileConfig(ProductConfig):
@@ -238,7 +305,7 @@ class RequestTranslator:
                 int(request.param),
                 self.config_defaults.products.get(product, {})
                 .get("params", {})
-                .get(request.param, {"param": {"id": request.param}}),
+                .get(int(request.param), {"param": {"id": request.param}}),
             )
             config[product].add_param(common, param, request)
         return config

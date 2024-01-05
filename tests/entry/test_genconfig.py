@@ -4,7 +4,7 @@ from ppcascade.entry.genconfig import RequestTranslator
 
 
 @pytest.fixture
-def generate_request(param: int, param_type: str, extra_keys: str):
+def generate_request(param: int, param_type: str, steps: str, extra_keys: str):
     return f"""compute,
     class=od,
     domain=g,
@@ -16,22 +16,23 @@ def generate_request(param: int, param_type: str, extra_keys: str):
     time=12,                 
     param={param},               
 	grid=O640,                
-	step=0/to/24/by/6,               
+	step={steps},               
 	target=fileset:test.grib,{extra_keys}
 	type={param_type}
 """
 
 
 @pytest.mark.parametrize(
-    "param, param_type, extra_keys, prod",
+    "param, param_type, steps, extra_keys, prod",
     [
-        [130, "em/es", "", "ensms"],
-        [10, "fc/cf", "", "forecast"],
-        [10, "pf", "number=1/to/5", "forecast"],
-        [131060, "ep", "", "prob"],
-        [132228, "efi/efic", "", "extreme"],
-        [132228, "sot", "number=10/90,", "extreme"],
-        [130, "pb", "quantile=100,", "quantiles"],
+        [130, "em/es", "0/to/24/by/6", "", "ensms"],
+        [10, "fc/cf", "0/to/24/by/6", "", "forecast"],
+        [10, "pf", "0/to/24/by/6", "number=1/to/5", "forecast"],
+        [131060, "ep", "0/to/24/by/6", "", "prob"],
+        [132228, "efi/efic", "12-24/24-36", "", "extreme"],
+        [132228, "sot", "12-24/24-36", "number=10/90,", "extreme"],
+        [132144, "efi", "12-24/24-36", "", "extreme"],
+        [130, "pb", "0/to/24/by/6", "quantile=100,", "quantiles"],
     ],
 )
 def test_config_generation(generate_request, prod, request, tmpdir):

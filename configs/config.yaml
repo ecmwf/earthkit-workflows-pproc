@@ -4,6 +4,7 @@ global:
     start: 1
 common:
   interpolate:
+    grid: O1280
     intgrid: none
     legendre-loader: shmem
     matrix-loader: file-io
@@ -295,6 +296,8 @@ products:
           scaleFactorOfUpperLimit: MISSING
           scaledValueOfUpperLimit: MISSING  
       131068:
+        steps: 
+          - [12, 360, 12]
         param: 
           id: [165, 166]
           operation: 'norm'
@@ -303,6 +306,8 @@ products:
           comparison: ">="
           value: 10
       131069:
+        steps: 
+          - [12, 360, 12]
         param: 
           id: [165, 166]
           operation: 'norm'
@@ -311,6 +316,12 @@ products:
           comparison: ">="
           value: 15
       131073:
+        steps: 
+          - [12, 240, 12]
+          - [123, 144, 3]
+          - [150, 240, 6]
+          - [228, 360, 12]
+          - [246, 360, 6]
         param: 
           id: 122
         ensemble:
@@ -318,8 +329,6 @@ products:
           comparison: "<="
           value: 273.15
           localDecimalScaleFactor: 2
-        steps:
-          - [126, 240, 6]
         windows: 
           operation: minimum
       131070:
@@ -375,6 +384,8 @@ products:
           - [12, 240, 12]
           - [123, 144, 3]
           - [150, 240, 6]
+          - [228, 360, 12]
+          - [246, 360, 6]
         grib_set:
           timeRangeIndicator: 0
         ensemble:
@@ -388,6 +399,8 @@ products:
           - [12, 240, 12]
           - [123, 144, 3]
           - [150, 240, 6]
+          - [228, 360, 12]
+          - [246, 360, 6]
         ensemble:
           operation: threshold_prob
           comparison: '>='
@@ -399,6 +412,8 @@ products:
           - [12, 240, 12]
           - [123, 144, 3]
           - [150, 240, 6]
+          - [228, 360, 12]
+          - [246, 360, 6]
         ensemble:
           operation: threshold_prob
           comparison: '>='
@@ -410,10 +425,38 @@ products:
           - [12, 240, 12]
           - [123, 144, 3]
           - [150, 240, 6]
+          - [228, 360, 12]
+          - [246, 360, 6]
         ensemble:
           operation: threshold_prob
           comparison: '>='
           value: 8
+      131022:
+        steps:
+          - [12, 360, 12]
+        param: 
+          id: 130
+        sources:
+          fdb:
+            ens:
+              type: cf/pf
+            clim:
+              stream: efhs
+              type: em/es
+          mars:
+            ens:
+              type: cf/pf
+            clim:
+              stream: efhs
+              type: em/es
+        ensemble:
+          operation: threshold_prob
+          comparison: <
+          value: -8
+        grib_set:
+          bitsPerValue: 24
+        windows:
+          operation: mean 
   quantiles:
     global:
       out_keys:
@@ -435,6 +478,8 @@ products:
       out_keys:
         bitsPerValue: 12
     common:
+      steps: 
+        - [0, 360, 6]
       sources:
         fdb:
           ens:
@@ -459,8 +504,121 @@ products:
           efic: efi
         eps: 1e-4
     params:
+      132167:
+        param:
+          id: 167
+        sources:
+          fdb:
+            clim: 
+              param: 228004
+          mars:
+            clim: 
+              param: 228004
+        grib_set:
+          edition: 1
+          gribTablesVersionNo: 132
+          indicatorOfParameter: 167
+          localDefinitionNumber: 19
+          timeRangeIndicator: 3
+        windows:
+          operation: mean
+      132202:
+        param:
+          id: 122
+        sources:
+          fdb:
+            clim:
+              param: 202
+          mars:
+            clim:
+              param: 202
+        grib_set:
+          edition: 1
+          gribTablesVersionNo: 132
+          indicatorOfParameter: 202
+          localDefinitionNumber: 19
+          timeRangeIndicator: 2
+        windows:
+          operation: minimum
+      132201:
+        param:
+          id: 121
+        sources:
+          fdb:
+            clim:
+              param: 201
+          mars:
+            clim:
+              param: 201
+        grib_set:
+          edition: 1
+          gribTablesVersionNo: 132
+          indicatorOfParameter: 201
+          localDefinitionNumber: 19
+          timeRangeIndicator: 2
+        windows:
+          operation: maximum
+      132165:
+        param:
+          id: 207
+        sources:
+          fdb:
+            clim: 
+              param: 228005
+          mars:
+            clim: 
+              param: 228005
+        grib_set:
+          edition: 1
+          gribTablesVersionNo: 132
+          indicatorOfParameter: 165
+          localDefinitionNumber: 19
+          timeRangeIndicator: 3
+        windows:
+          operation: maximum
+      132049:
+        param:
+          id: 123
+        sources: 
+          fdb:
+            clim:
+              param: 49 
+          mars:
+            clim:
+              param: 49 
+        grib_set:
+          edition: 1
+          gribTablesVersionNo: 132
+          indicatorOfParameter: 49
+          localDefinitionNumber: 19
+          timeRangeIndicator: 2
+        windows:
+          operation: maximum
+      132216:
+        steps: 
+        - [0, 360, 6]
+        param:
+          id: 229
+        sources:
+          clim:
+            fdb:
+              param: 140200
+              stream: wehs
+            mars:
+              param: 140200
+              stream: wehs
+        grib_set:
+          edition: 1
+          gribTablesVersionNo: 132
+          indicatorOfParameter: 216
+          localDefinitionNumber: 19
+          timeRangeIndicator: 2
+        windows:
+          operation: maximum
       132228:
-        param: 
+        steps:
+        - [0, 360, 6]
+        param:
           id: 228
         grib_set:
           edition: 1
@@ -468,19 +626,84 @@ products:
           indicatorOfParameter: 228
           localDefinitionNumber: 19
           timeRangeIndicator: 5
-          stepType: diff
         windows:
           operation: diff
           include_start_step: True
+      132144:
+        steps:
+        - [0, 360, 6]
+        param:
+          id: 144
+        grib_set:
+          edition: 1
+          gribTablesVersionNo: 132
+          indicatorOfParameter: 144
+          localDefinitionNumber: 19
+          timeRangeIndicator: 5
+        windows:
+          operation: diff    
+          include_start_step: True 
+      132045:
+        steps:
+        - [0, 360, 6]
+        param:
+          id: [162071, 162072]
+          operation: norm
+        sources:
+          fdb:
+            clim:
+              param: 162045
+          mars:
+            clim:
+              param: 162045
+        grib_set:
+          edition: 1
+          gribTablesVersionNo: 132
+          indicatorOfParameter: 45
+          localDefinitionNumber: 19
+          timeRangeIndicator: 3
+        window: 
+          operation: mean
+      132059:
+        steps:
+        - [0, 360, 6]
+        param:
+          id: [228035, 228035]
+          operation: filter
+          comparison: <=
+          threshold: 10
+        sources:
+          fdb:
+            clim: 
+              param: 59
+          mars:
+            clim: 
+              param: 59
+        grib_set:
+          edition: 1
+          gribTablesVersionNo: 132
+          indicatorOfParameter: 59
+          indicatorOfTypeOfLevel: 1
+          localDefinitionNumber: 19
+          timeRangeIndicator: 2
+          typeOfStatisticalProcessing: 1  
+        windows:
+          operation: maximum
       132044:
+        steps:
+        - [0, 360, 6]
         param:
           id: [228036, 228035]
           operation: filter
           comparison: <=
           threshold: 10
         sources:
-          clim:
-            param: 228044
+          fdb:
+            clim:
+              param: 228044
+          mars:
+            clim:
+              param: 228044
         grib_set:
           param: 228035
           typeOfStatisticalProcessing: 1
