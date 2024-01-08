@@ -14,7 +14,22 @@ class ConfigDefaults:
         with open(filename, "r") as f:
             config = yaml.safe_load(f)
         self.products = config.pop("products", {})
+        self.type_to_product = {}
+        for mars_types in self.products.keys():
+            for type in mars_types.split("/"):
+                self.type_to_product[type] = mars_types
         self.base = config
+
+    def product(self, request_type: str) -> dict:
+        prod_type = self.type_to_product.get(request_type, None)
+        if prod_type is None:
+            assert request_type in [
+                ProductType.CTRL_FORECAST,
+                ProductType.DET_FORECAST,
+                ProductType.PERTURBED_FORECAST,
+            ]
+            return {}
+        return self.products[prod_type]
 
 
 class ProductConfig:
@@ -238,7 +253,79 @@ class ForecastConfig(ProductConfig):
         if request.type == ProductType.PERTURBED_FORECAST:
             start, end = request.base_request[MarsKey.NUMBER]
             request.base_request[MarsKey.NUMBER] = list(range(start, end + 1))
-        return super().add_param(common, param, request)
+        return super().add_param(common, param, request, additional_updates)
+
+
+class EnsembleAnomalyConfig(ProductConfig):
+    graph_product = "ensemble_anomaly"
+
+    def add_param(
+        self,
+        common: dict,
+        param: dict,
+        request: ComputeRequest,
+        additional_updates: dict | None = None,
+    ):
+        updates = (
+            copy.deepcopy(additional_updates) if additional_updates is not None else {}
+        )
+        steps = []
+        for step_range in request.steps:
+            if len(step_range) == 3:
+                steps.extend(range(step_range[0], step_range[1] + 1, step_range[2]))
+            else:
+                assert (
+                    len(set(step_range)) == 1
+                ), f"Expected range to consist of single step. Got {step_range}"
+                steps.append(int(step_range[0]))
+        for src in common["sources"].keys():
+            deep_update(
+                param,
+                {
+                    "sources": {
+                        src: {
+                            "clim": {
+                                "date": EnsembleAnomalyConfig.clim_date(
+                                    request.base_request[MarsKey.DATE]
+                                ),
+                                "step": {
+                                    x: EnsembleAnomalyConfig.clim_step(
+                                        x, request.base_request[MarsKey.TIME]
+                                    )
+                                    for x in steps
+                                },
+                            }
+                        }
+                    }
+                },
+            )
+        super().add_param(common, param, request, updates)
+
+    @staticmethod
+    def clim_date(date_str: str):
+        """
+        Assumes climatology run on Monday and Thursday and retrieves most recent
+        date climatology available
+        """
+        date = datetime.strptime(date_str, "%Y%m%d%H")
+        dow = date.weekday()
+        if dow >= 0 and dow < 3:
+            return (date - timedelta(days=dow)).strftime("%Y%m%d")
+        return (date - timedelta(days=(dow - 3))).strftime("%Y%m%d")
+
+    @staticmethod
+    def clim_step(step: int, time: str):
+        """
+        Nearest step with climatology data to step,
+        taking into account diurnal variation in climatology
+        which requires climatology step time to be same
+        as step
+        """
+        if time in ["12", "18"]:
+            if step == 360:
+                return step - 12
+            return step + 12
+        return step
 
 
 def deep_update(original: dict, update: Any) -> dict:
@@ -251,61 +338,52 @@ def deep_update(original: dict, update: Any) -> dict:
 
 
 class RequestTranslator:
+    config_mapping = {
+        ProductType.EFI: ExtremeConfig,
+        ProductType.EFI_CONTROL: ExtremeConfig,
+        ProductType.SOT: ExtremeConfig,
+        ProductType.QUANTILES: QuantileConfig,
+        ProductType.ENS_MEAN: EnsmsConfig,
+        ProductType.ENS_STD: EnsmsConfig,
+        ProductType.EVENT_PROB: ProductConfig,
+        ProductType.CTRL_FORECAST: ForecastConfig,
+        ProductType.DET_FORECAST: ForecastConfig,
+        ProductType.PERTURBED_FORECAST: ForecastConfig,
+    }
+
     def __init__(self, filename: str):
         self.config_defaults = ConfigDefaults(filename)
 
-    def _new_product(self, prod_type: ProductType):
-        config_type = ProductConfig
-        if prod_type in [
-            ProductType.EFI,
-            ProductType.EFI_CONTROL,
-            ProductType.SOT,
-        ]:
-            product, config_type = "extreme", ExtremeConfig
-        elif prod_type == ProductType.EVENT_PROB:
-            product = "prob"
-        elif prod_type == ProductType.QUANTILES:
-            product, config_type = "quantiles", QuantileConfig
-        elif prod_type in [ProductType.ENS_MEAN, ProductType.ENS_STD]:
-            product, config_type = "ensms", EnsmsConfig
-        elif prod_type in [
-            ProductType.CLUSTER_MEAN,
-            ProductType.CLUSTER_REP,
-            ProductType.CLUSTER_STD,
-        ]:
-            raise NotImplementedError()
-        else:
-            assert prod_type in [
-                ProductType.DET_FORECAST,
-                ProductType.CTRL_FORECAST,
-                ProductType.PERTURBED_FORECAST,
-            ]
-            product, config_type = "forecast", ForecastConfig
+    def _product_config(self, config: dict, request_type: str, param_config: dict):
+        config_type = self.config_mapping.get(request_type)
+        if request_type == ProductType.EVENT_PROB:
+            sources = param_config.get("sources", {})
+            if len(sources) > 0 and "clim" in list(sources.values())[0]:
+                config_type = EnsembleAnomalyConfig
+
         prod_config = copy.deepcopy(self.config_defaults.base["global"])
-        prod_config.update(
-            self.config_defaults.products.get(product, {}).get("global", {})
-        )
-        return product, config_type(**prod_config)
+        prod_config.update(self.config_defaults.product(request_type).get("global", {}))
+        config.setdefault(config_type.__name__, config_type(**prod_config))
+        return config[config_type.__name__]
 
     def translate(self, request_file: str):
         requests = parse_request(request_file)
         config = {}
         for request in requests:
-            product, prod_config = self._new_product(request.type)
-
-            config.setdefault(product, prod_config)
             common = copy.deepcopy(self.config_defaults.base["common"])
             deep_update(
-                common, self.config_defaults.products.get(product, {}).get("common", {})
+                common, self.config_defaults.product(request.type).get("common", {})
             )
 
             # Try to see if param details is specified in the base params, if not try product params
             # otherwise parameter operation is trivial
             param = self.config_defaults.base["params"].get(
                 int(request.param),
-                self.config_defaults.products.get(product, {})
+                self.config_defaults.product(request.type)
                 .get("params", {})
                 .get(int(request.param), {"param": {"id": request.param}}),
             )
-            config[product].add_param(common, param, request)
+
+            prod_config = self._product_config(config, request.type, param)
+            prod_config.add_param(common, param, request)
         return config

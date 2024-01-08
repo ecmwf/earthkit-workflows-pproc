@@ -83,7 +83,7 @@ params:
       gribTablesVersionNo: 128
       indicatorOfParameter: 10
 products:
-  ensms:
+  em/es: 
     global:
       out_keys:
         perturbationNumber: 0
@@ -102,7 +102,7 @@ products:
         operation:
           em: mean
           es: std
-  prob:
+  ep:
     global:
       out_keys:
         type: ep
@@ -127,7 +127,7 @@ products:
           operation: threshold_prob
           comparison: ">="
           value: 0.001
-          localDecimalScaleFactor: 3
+          local_scale_factor: 3
         grib_set:
           timeRangeIndicator: 5
           stepType: diff 
@@ -141,7 +141,7 @@ products:
           operation: threshold_prob
           comparison: ">="
           value: 0.005
-          localDecimalScaleFactor: 3
+          local_scale_factor: 3
         grib_set:
           timeRangeIndicator: 5
           stepType: diff 
@@ -155,7 +155,7 @@ products:
           operation: threshold_prob
           comparison: ">="
           value: 0.01
-          localDecimalScaleFactor: 3
+          local_scale_factor: 3
         grib_set:
           timeRangeIndicator: 5
           stepType: diff 
@@ -169,7 +169,7 @@ products:
           operation: threshold_prob
           comparison: ">="
           value: 0.02
-          localDecimalScaleFactor: 3
+          local_scale_factor: 3
         grib_set:
           timeRangeIndicator: 5
           stepType: diff 
@@ -183,7 +183,7 @@ products:
           operation: threshold_prob
           comparison: "<"
           value: 0.0001
-          localDecimalScaleFactor: 4
+          local_scale_factor: 4
         grib_set:
           timeRangeIndicator: 5
           stepType: diff 
@@ -197,7 +197,7 @@ products:
           operation: threshold_prob
           comparison: "<"
           value: 0.001
-          localDecimalScaleFactor: 4
+          local_scale_factor: 4
         grib_set:
           timeRangeIndicator: 5
           stepType: diff 
@@ -211,7 +211,7 @@ products:
           operation: threshold_prob
           comparison: ">="
           value: 0.003
-          localDecimalScaleFactor: 4
+          local_scale_factor: 4
         grib_set:
           timeRangeIndicator: 5
           stepType: diff 
@@ -225,7 +225,7 @@ products:
           operation: threshold_prob
           comparison: ">="
           value: 0.005
-          localDecimalScaleFactor: 4
+          local_scale_factor: 4
         grib_set:
           timeRangeIndicator: 5
           stepType: diff 
@@ -328,7 +328,7 @@ products:
           operation: threshold_prob
           comparison: "<="
           value: 273.15
-          localDecimalScaleFactor: 2
+          local_scale_factor: 2
         windows: 
           operation: minimum
       131070:
@@ -431,9 +431,9 @@ products:
           operation: threshold_prob
           comparison: '>='
           value: 8
-      131022:
+      131022: # t850
         steps:
-          - [12, 360, 12]
+          - [0, 360, 12]
         param: 
           id: 130
         sources:
@@ -457,7 +457,44 @@ products:
           bitsPerValue: 24
         windows:
           operation: mean 
-  quantiles:
+      133093: # t850
+        steps:
+          - [0, 360, 12]
+        param: 
+          id: 130
+        sources:
+          fdb:
+            ens:
+              type: cf/pf
+            clim:
+              stream: efhs
+              type: em/es
+          mars:
+            ens:
+              type: cf/pf
+            clim:
+              stream: efhs
+              type: em/es
+        ensemble:
+          operation: threshold_prob
+          comparison: ">"
+          value: -1
+        grib_set:
+          localDefinitionNumber: 30
+          bitsPerValue: 24
+          edition: 2
+          typeOfGeneratingProcess: 5
+          paramId: 0
+          timeIncrement: 12
+          indicatorOfUnitForTimeIncrement: 1
+          typeOfStatisticalProcessing: 10
+          packingType: grid_ccsds
+          scaleFactorOfUpperLimit: MISSING
+          scaledValueOfUpperLimit: MISSING
+        windows:
+          operation: mean
+          std_anomaly: True
+  pb:
     global:
       out_keys:
         type: "pb"
@@ -473,7 +510,7 @@ products:
             - type: cf
       ensemble: 
         operation: quantiles
-  extreme:
+  efi/efic/sot:
     global:
       out_keys:
         bitsPerValue: 12

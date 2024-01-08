@@ -25,14 +25,16 @@ def generate_request(param: int, param_type: str, steps: str, extra_keys: str):
 @pytest.mark.parametrize(
     "param, param_type, steps, extra_keys, prod",
     [
-        [130, "em/es", "0/to/24/by/6", "", "ensms"],
-        [10, "fc/cf", "0/to/24/by/6", "", "forecast"],
-        [10, "pf", "0/to/24/by/6", "number=1/to/5", "forecast"],
-        [131060, "ep", "0/to/24/by/6", "", "prob"],
-        [132228, "efi/efic", "12-24/24-36", "", "extreme"],
-        [132228, "sot", "12-24/24-36", "number=10/90,", "extreme"],
-        [132144, "efi", "12-24/24-36", "", "extreme"],
-        [130, "pb", "0/to/24/by/6", "quantile=100,", "quantiles"],
+        [130, "em/es", "0/to/24/by/6", "", "EnsmsConfig"],
+        [10, "fc/cf", "0/to/24/by/6", "", "ForecastConfig"],
+        [10, "pf", "0/to/24/by/6", "number=1/to/5", "ForecastConfig"],
+        [131060, "ep", "0/to/24/by/6", "", "ProductConfig"],
+        [131022, "ep", "0/6/12", "", "EnsembleAnomalyConfig"],
+        [131022, "ep", "0/to/24/by/6", "", "EnsembleAnomalyConfig"],
+        [132228, "efi/efic", "12-24/24-36", "", "ExtremeConfig"],
+        [132228, "sot", "12-24/24-36", "number=10/90,", "ExtremeConfig"],
+        [132144, "efi", "12-24/24-36", "", "ExtremeConfig"],
+        [130, "pb", "0/to/24/by/6", "quantile=100,", "QuantileConfig"],
     ],
 )
 def test_config_generation(generate_request, prod, request, tmpdir):
