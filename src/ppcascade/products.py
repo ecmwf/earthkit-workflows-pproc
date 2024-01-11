@@ -1,5 +1,5 @@
 import numpy as np
-import xarray as xr
+import argparse
 
 from cascade.graph import Graph, deduplicate_nodes
 from cascade.fluent import Payload
@@ -40,7 +40,22 @@ def _read(
     return all_actions
 
 
-def ensemble_anomaly(args):
+def ensemble_anomaly(args: argparse.Namespace):
+    """
+    Generate graph for ensemble member anomaly products e.g. threshold probabilities
+    for t850. Input parameters args must contain the following attributes:
+        forecast: str,  source for forecast data (GRIB)
+        climatology: str, source for climatology data (GRIB)
+        config: str, path to configuration file
+
+    Parameters
+    ----------
+    args: argparse.Namespace containing attributes listed above
+
+    Returns
+    -------
+    Graph
+    """
     config = Config(args)
     total_graph = Graph([])
     for param_config in config.parameters:
@@ -72,7 +87,22 @@ def ensemble_anomaly(args):
     return deduplicate_nodes(total_graph)
 
 
-def ensemble(args):
+def ensemble(args: argparse.Namespace):
+    """
+    Generate graph for ensemble member processing products e.g. ensms,
+    quantiles, threshold probabilties. Input parameters
+    args must contain the following attributes:
+        forecast: str,  source for forecast data (GRIB)
+        config: str, path to configuration file
+
+    Parameters
+    ----------
+    args: argparse.Namespace containing attributes listed above
+
+    Returns
+    -------
+    Graph
+    """
     config = Config(args)
     total_graph = Graph([])
     for param_config in config.parameters:
@@ -98,7 +128,22 @@ def ensemble(args):
     return deduplicate_nodes(total_graph)
 
 
-def extreme(args):
+def extreme(args: argparse.Namespace):
+    """
+    Generate graph for EFI/SOT products. Input parameters
+    args must contain the following attributes:
+        forecast: str,  source for forecast data (GRIB)
+        climatology: str, source for climatology data (GRIB)
+        config: str, path to configuration file
+
+    Parameters
+    ----------
+    args: argparse.Namespace containing attributes listed above
+
+    Returns
+    -------
+    Graph
+    """
     config = Config(args)
     total_graph = Graph([])
     for param_config in config.parameters:
@@ -127,7 +172,34 @@ def extreme(args):
     return deduplicate_nodes(total_graph)
 
 
-def clustereps(args):
+def clustereps(args: argparse.Namespace) -> Graph:
+    """
+    Generate graph for clustereps related products. Input parameters
+    args must contain the following attributes:
+        mask: str | None,
+        spread: str | None, source for ensemble spread (GRIB)
+        spread_compute: list[str], source for ensemble spread computation (GRIB)
+        ensemble: str,  source for forecast data (GRIB)
+        deterministic: str, source for deterministic forecast data (GRIB)
+        clim_dir: str, climatology data root directory
+        pca: str | None, PCA outputs (NPZ)
+        centroids: str | None, cluster centroids output (GRIB)
+        representative: str | None, representative members output (GRIB)
+        cen_anomalies: str | None, cluster centroids output in anomaly space (GRIB)
+        rep_anomalies: str | None, cluster representative members output in anomaly space (GRIB)
+        indexes: str | None, cluster indexes output (NPZ)
+        comp_file: str | None, number of components output (text)
+        output_root: str, output directory for reports
+        config: str, path to configuration file
+
+    Parameters
+    ----------
+    args: argparse.Namespace containing attributes listed above
+
+    Returns
+    -------
+    Graph
+    """
     config = ClusterConfig(args)
     if args.spread is not None:
         spread = _read(config.spread_request(args.spread, no_expand=("step",)))
