@@ -4,9 +4,7 @@ import argparse
 import functools
 
 from cascade.cascade import Cascade
-from cascade.contextgraph import ContextGraph
-from cascade.scheduler import Schedule
-from cascade.executor import DaskExecutor
+from cascade.executor import DaskLocalExecutor
 from cascade.graph import Graph, deduplicate_nodes, pyvis
 
 from ppcascade.entry.genconfig import RequestTranslator
@@ -140,12 +138,12 @@ def main(sys_args):
             hierarchical_layout=False,
         )
         pyvis_graph.show(f"{args.output_root}/graph.html")
-    executor = DaskExecutor(Schedule(graph, ContextGraph(), {}))
-    executor.execute(
-        args.memory,
+    DaskLocalExecutor.execute(
+        graph,
         args.workers,
         args.threads_per_worker,
-        f"{args.output_root}/dask_report.html",
+        memory_limit=args.memory,
+        report=f"{args.output_root}/dask_report.html",
     )
 
 
