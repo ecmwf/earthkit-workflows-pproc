@@ -1,0 +1,72 @@
+out_keys:
+  bitsPerValue: 12
+members:
+  end: 5
+  start: 1
+parameters:
+  - target: "fileset:cascade_extreme_{param}.grib"
+    ensemble:
+      operation: extreme
+      eps: 1e-4
+      sot: [90]
+      efi_control: True
+    defs:
+      base_keys: &base_keys_tp
+        class: od
+        domain: g
+        expver: '0001'
+        levtype: sfc
+        param: 167
+      base_interp: &base_interp_tp
+        grid: 'O640'
+        intgrid: none
+        legendre-loader: shmem
+        matrix-loader: file-io
+      clim_steps: &clim_steps
+        12-36: 0-24
+        36-60: 24-48
+        60-84: 48-72
+        84-108: 72-96
+        108-132: 96-120
+        132-156: 120-144
+    sources:
+      mars:
+        ens:
+          - <<: *base_keys_tp
+            date: "20240222"
+            time: 12
+            stream: enfo
+            type: cf
+            interpolate: *base_interp_tp
+          - <<: *base_keys_tp
+            date: "20240222"
+            time: 12
+            stream: enfo
+            type: pf
+            interpolate: *base_interp_tp
+        clim:
+          <<: *base_keys_tp
+          date: "20240222"
+          time: '00'
+          stream: efhs
+          type: cd
+          param: 228004
+          quantile: 100
+          interpolate: *base_interp_tp
+          step: *clim_steps
+    windows:
+      ranges:
+        - [12, 36, 6]
+        - [36, 60, 6]
+        #- [60, 84, 6]
+        #- [84, 108, 6]
+        #- [108, 132, 6]
+        #- [132, 156, 6]
+      operation: mean
+    grib_set:
+        edition: 1
+        timeRangeIndicator: 3
+        indicatorOfParameter: 167
+        localDefinitionNumber: 19
+        gribTablesVersionNo: 132
+        mars.expver: '9078'

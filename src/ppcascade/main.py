@@ -4,7 +4,7 @@ import argparse
 import functools
 
 from cascade.cascade import Cascade
-from cascade.executor import DaskLocalExecutor
+from cascade.executors.dask import DaskLocalExecutor
 from cascade.graph import Graph, deduplicate_nodes, pyvis
 
 from ppcascade.entry.genconfig import RequestTranslator
@@ -140,8 +140,8 @@ def main(sys_args):
         pyvis_graph.show(f"{args.output_root}/graph.html")
     DaskLocalExecutor.execute(
         graph,
-        args.workers,
-        args.threads_per_worker,
+        n_workers=args.workers,
+        threads_per_worker=args.threads_per_worker,
         memory_limit=args.memory,
         report=f"{args.output_root}/dask_report.html",
     )

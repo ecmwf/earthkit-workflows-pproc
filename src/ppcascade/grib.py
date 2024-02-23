@@ -11,13 +11,17 @@ def time_range_indicator(step: int) -> int:
 
 def basic_headers(grib_sets: dict) -> dict:
     ret = grib_sets.copy()
-    step = ret.get("step")
-    if step is None:
+    if "step" in ret:
+        try:
+            int(ret["step"])
+        except ValueError:
+            ret["stepRange"] = ret.pop("step")
+
+    if ret.get("step") is None:
         assert ret.get("stepRange") is not None
         ret.setdefault("stepType", "max")
     else:
-        step = int(step)
-        ret["timeRangeIndicator"] = time_range_indicator(step)
+        ret["timeRangeIndicator"] = time_range_indicator(ret["step"])
     return ret
 
 

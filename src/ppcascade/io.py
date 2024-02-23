@@ -165,7 +165,7 @@ def write(loc: str, data: NumpyFieldList, grib_sets: dict):
     if isinstance(target, (FileTarget, FileSetTarget)):
         # Allows file to be appended on each write call
         target.enable_recovery()
-    assert len(data) == 1
+    assert len(data) == 1, f"Expected single field, received {len(data)}"
     metadata = grib_sets.copy()
     metadata.update(data.metadata()[0]._d)
     metadata = basic_headers(metadata)

@@ -9,9 +9,10 @@ from cascade.fluent import MultiAction as BaseMultiAction
 from cascade.fluent import Fluent
 
 
-from .io import cluster_write
+from .io import cluster_write, retrieve
 from .io import write as write_grib
 from .utils.window import WindowConfig, Range
+from .utils.request import Request, MultiSourceRequest
 
 
 class SingleAction(BaseSingleAction):
@@ -32,6 +33,7 @@ class SingleAction(BaseSingleAction):
     def efi(
         self, climatology: Action, windows: WindowConfig, eps: float, dim: str = "step"
     ):
+        eps = float(eps)
         assert len(windows.ranges) == 1
         assert self.nodes.coords[dim] == windows.ranges[0].name
         num_steps = len(windows.ranges[0].steps)
@@ -52,6 +54,7 @@ class SingleAction(BaseSingleAction):
         dim: str = "step",
         new_dim: str = "sot",
     ):
+        eps = float(eps)
         assert len(windows.ranges) == 1
         assert self.nodes.coords[dim] == windows.ranges[0].name
         num_steps = len(windows.ranges[0].steps)
@@ -149,6 +152,7 @@ class MultiAction(BaseMultiAction):
         ------
         MultiAction
         """
+        eps = float(eps)
         concat = self.concatenate(ensemble_dim)
         efi = concat.efi(climatology, windows, eps, window_dim)
         efi._add_dimension(new_dim, "efi")
@@ -170,7 +174,7 @@ class MultiAction(BaseMultiAction):
         windows: WindowConfig,
         ensemble_dim: str = "number",
         window_dim: str = "step",
-        **kwargs
+        **kwargs,
     ):
         if operation == "extreme":
             return self.extreme(
@@ -178,7 +182,7 @@ class MultiAction(BaseMultiAction):
                 windows,
                 ensemble_dim=ensemble_dim,
                 window_dim=window_dim,
-                **kwargs
+                **kwargs,
             )
         return self.concatenate(ensemble_dim).__getattribute__(operation)(
             climatology, windows, dim=window_dim, **kwargs
@@ -187,6 +191,8 @@ class MultiAction(BaseMultiAction):
     def efi(
         self, climatology: Action, windows: WindowConfig, eps: float, dim: str = "step"
     ):
+        eps = float(eps)
+
         def _efi(action: Action, window: Range) -> Action:
             num_steps = len(window.steps)
             ret = action.select({dim: window.name}).reduce(
@@ -211,6 +217,8 @@ class MultiAction(BaseMultiAction):
         dim: str = "step",
         new_dim: str = "sot",
     ):
+        eps = float(eps)
+
         def _sot_windows(action: Action, window: Range) -> Action:
             num_steps = len(window.steps)
 
@@ -275,9 +283,9 @@ class MultiAction(BaseMultiAction):
             (
                 Node.input_name(0),
                 comparison,
-                value,
-                local_scale_factor,
-            ),  # Needs edition!!
+                float(value),
+                float(local_scale_factor) if local_scale_factor is not None else None,
+            ),  # TODO: Needs edition!!
         )
         return (
             self.map(payload)
@@ -290,7 +298,7 @@ class MultiAction(BaseMultiAction):
         clim_mean: Action,
         clim_std: Action,
         std_anomaly: bool = False,
-        **method_kwargs
+        **method_kwargs,
     ):
         anom = self.join(clim_mean, "**datatype**", match_coord_values=True).subtract(
             **method_kwargs
@@ -309,7 +317,7 @@ class MultiAction(BaseMultiAction):
             return new_quantile
 
         ret = self.concatenate(dim).transform(
-            _quantiles, np.linspace(0.0, 1.0, num_quantiles + 1), new_dim
+            _quantiles, np.linspace(0.0, 1.0, int(num_quantiles) + 1), new_dim
         )
         ret.non_descript_dim(new_dim)
         return ret
@@ -345,16 +353,19 @@ class MultiAction(BaseMultiAction):
 
     def window_operation(self, windows: WindowConfig, dim: str = "step"):
         if windows.operation is None:
-            self._squeeze_dimension(dim)
-            return self
+            ret = self._squeeze_dimension(dim)
+        else:
 
-        def _window_operation(action: Action, range: Range) -> Action:
-            window_action = action.select({dim: range.steps})
-            window_action = getattr(window_action, windows.operation)(dim)
-            window_action._add_dimension(dim, range.name)
-            return window_action
+            def _window_operation(action: Action, range: Range) -> Action:
+                window_action = action.select({dim: range.steps})
+                window_action = getattr(window_action, windows.operation)(dim)
+                window_action._add_dimension(dim, range.name)
+                return window_action
 
-        ret = self.transform(_window_operation, windows.ranges, dim)
+            ret = self.transform(_window_operation, windows.ranges, dim)
+
+        if dim not in ret.nodes.dims:
+            ret.add_attributes({dim: windows.ranges[0].name})
         return ret
 
     def pca(self, config, mask, target: str = None):
@@ -436,3 +447,30 @@ class PProcFluent(Fluent):
         backend=NumpyFieldListBackend,
     ):
         super().__init__(single_action, multi_action, backend)
+
+    def source(
+        self,
+        requests: list[Request | MultiSourceRequest],
+        join_key: str = "number",
+        **kwargs,
+    ):
+        all_actions = None
+        for request in requests:
+            payloads = np.empty(tuple(request.dims.values()), dtype=object)
+            for indices, new_request in request.expand():
+                payloads[indices] = (new_request,)
+            new_action = super().source(
+                retrieve,
+                xr.DataArray(
+                    payloads,
+                    coords={key: list(request[key]) for key in request.dims.keys()},
+                ),
+                kwargs,
+            )
+
+            if all_actions is None:
+                all_actions = new_action
+            else:
+                assert len(join_key) != 0
+                all_actions = all_actions.join(new_action, join_key)
+        return all_actions

@@ -1,3 +1,28 @@
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "pproc-cascade"
+version = "0.0.1"
+requires-python = ">=3.10"
+dependencies = [
+    "eccodes",
+    "earthkit-data==0.4.0",
+    "filelock>=3.12.0",
+    "numexpr",
+    "dill",
+    "cython",
+    "scipy",
+    "cascade-python @ git+ssh://git@github.com/ecmwf/cascade.git",
+    "meteokit @ git+ssh://git@git.ecmwf.int/ecsdk/meteokit.git",
+    "pyfdb @ git+https://github.com/ecmwf/pyfdb.git@master",
+    "pproc @ git+ssh://git@git.ecmwf.int/ecsdk/pproc.git"
+]
+
+[project.optional-dependencies]
+tests = ["pytest"]
+lint = ["black"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,6 +1,6 @@
 extreme:
   forecast: "fdb:ens"
-  climatology: "clim:ens"
+  climatology: "fdb:clim"
 ensemble:
   forecast: "mars:ens"
 ensemble_anomaly:
