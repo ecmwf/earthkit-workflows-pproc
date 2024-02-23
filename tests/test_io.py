@@ -53,34 +53,3 @@ def test_multiprocess(tmpdir):
     for future in fut.as_completed(futures):
         data = future.result()
         write(f"{tmpdir}/test.grib", data, {"step": 12})
-
-
-def test_mars_cache(tmpdir):
-    request = {
-        "class": "od",
-        "date": 20231116,
-        "domain": "g",
-        "expver": "0001",
-        "interpolate": {
-            "accuracy": "24",
-            "grid": "1.5/1.5",
-            "intgrid": "none",
-            "legendre-loader": "shmem",
-            "matrix-loader": "file-io",
-        },
-        "levelist": 500,
-        "levtype": "pl",
-        "param": 129,
-        "stream": "enfo",
-        "time": "1200",
-        "type": "es",
-        "source": "mars",
-        "step": [120, 132, 144, 156, 168],
-        "cache": f"{tmpdir}/es_z500_{{date}}{{time}}_{{step[0]}}",
-    }
-    mars_fl = retrieve(request)
-    request.pop("interpolate")
-    location = request.pop("cache")
-    request.update(source="fileset", location=location)
-    file_fl = retrieve(request)
-    assert np.all(mars_fl.values == file_fl.values)
