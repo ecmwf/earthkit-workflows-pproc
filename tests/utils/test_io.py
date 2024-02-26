@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import pytest
 
-from ppcascade.io import retrieve, write
+from ppcascade.utils.io import retrieve
 
 request = {
     "class": "od",
@@ -19,10 +19,9 @@ request = {
 }
 
 
-def test_retrieve(tmpdir):
+def test_retrieve():
     # Retrieve from single source
     data = retrieve(request)
-    write(f"{tmpdir}/test.grib", data, {"step": 12})
 
     # Retrieve with multiple sources
     fdb_request = request.copy()

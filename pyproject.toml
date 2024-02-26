@@ -14,6 +14,7 @@ dependencies = [
     "dill",
     "cython",
     "scipy",
+    "code-meters",
     "cascade-python @ git+ssh://git@github.com/ecmwf/cascade.git",
     "meteokit @ git+ssh://git@git.ecmwf.int/ecsdk/meteokit.git",
     "pyfdb @ git+https://github.com/ecmwf/pyfdb.git@master",

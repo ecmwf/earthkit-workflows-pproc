@@ -1,5 +1,7 @@
 from earthkit.data import FieldList
 
+from .window import Range
+
 
 def time_range_indicator(step: int) -> int:
     if step == 0:
@@ -9,31 +11,28 @@ def time_range_indicator(step: int) -> int:
     return 0
 
 
-def basic_headers(grib_sets: dict) -> dict:
-    ret = grib_sets.copy()
-    if "step" in ret:
-        try:
-            int(ret["step"])
-        except ValueError:
-            ret["stepRange"] = ret.pop("step")
-
-    if ret.get("step") is None:
-        assert ret.get("stepRange") is not None
-        ret.setdefault("stepType", "max")
-    else:
+def window_grib_headers(operation: str, range: Range) -> dict:
+    ret = {}
+    try:
+        ret["step"] = int(range.name)
         ret["timeRangeIndicator"] = time_range_indicator(ret["step"])
+    except ValueError:
+        ret["stepRange"] = range.name
+        if operation == "diff":
+            ret.update({"stepType": "diff", "timeRangeIndicator": 5})
+        if operation == "mean":
+            ret["timeRangeIndicator"] = 3
+            ret["numberIncludedInAverage"] = len(range.steps)
+            ret["numberMissingFromAveragesOrAccumulations"] = 0
+        if operation in ["minimum", "maxmimum"]:
+            ret["timeRangeIndicator"] = 2
+        ret.setdefault("stepType", "max")
     return ret
 
 
-def extreme_grib_headers(clim: FieldList, ens: FieldList, num_steps: int) -> dict:
+def extreme_grib_headers(clim: FieldList, ens: FieldList) -> dict:
     extreme_headers = {}
-
-    # EFI specific stuff
     ens_template = ens.metadata()[0].buffer_to_metadata()
-    if int(ens_template.get("timeRangeIndicator")) == 3:
-        if extreme_headers.get("numberIncludedInAverage") == 0:
-            extreme_headers["numberIncludedInAverage"] = num_steps
-        extreme_headers["numberMissingFromAveragesOrAccumulations"] = 0
 
     # set clim keys
     clim_template = clim.metadata()[0].buffer_to_metadata()

@@ -5,7 +5,7 @@ import numpy as np
 from earthkit.data import FieldList
 from earthkit.data.core.metadata import RawMetadata
 
-from ppcascade.backend import NumpyFieldListBackend
+from ppcascade.backends.fieldlist import NumpyFieldListBackend
 
 
 class MockMetaData(RawMetadata):
@@ -112,8 +112,8 @@ def test_extreme():
             "numberOfBitsContainingEachPackedValue": 0,
         }
     )
-    NumpyFieldListBackend.efi(clim, ens, 0.0001, 2)
-    NumpyFieldListBackend.sot(clim, ens, 90, 0.0001, 2)
+    NumpyFieldListBackend.efi(clim, ens, 0.0001)
+    NumpyFieldListBackend.sot(clim, ens, 90, 0.0001)
 
 
 def test_quantiles():

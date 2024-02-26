@@ -1,29 +1,13 @@
 from io import BytesIO
-import numpy as np
-import os
-import importlib
-from os.path import join as pjoin
 import shutil
+from meters import metered
 
 import mir
-from pproc.common.io import (
-    target_from_location,
-    write_grib,
-    FileTarget,
-    FileSetTarget,
-)
-from pproc.common.resources import ResourceMeter, metered, pretty_bytes
-from pproc.clustereps.__main__ import write_cluster_attr_grib
-from pproc.clustereps.cluster import get_output_keys
 from pproc.common.io import split_location
-from earthkit.data import FieldList
 from earthkit.data.sources.stream import StreamSource
 from earthkit.data.sources.file import FileSource
 from earthkit.data.sources import Source, from_source
 from earthkit.data.sources.numpy_list import NumpyFieldList
-
-from .grib import basic_headers
-from .wrappers.metadata import GribBufferMetaData
 
 
 def _source_from_location(loc, sources) -> tuple[str, list[dict]]:
@@ -120,7 +104,7 @@ def retrieve(request: dict | list[dict], **kwargs):
     else:
         func = retrieve_multi_sources
     meter, result = metered(f"RETRIEVE {request}", None, True)(func)(request, **kwargs)
-    print(f"{str(meter)}, size: {pretty_bytes(result.values.nbytes)}")
+    print(f"{str(meter)}")
     return result
 
 
@@ -137,8 +121,6 @@ def retrieve_multi_sources(requests: list[dict], **kwargs) -> NumpyFieldList:
 
 
 def retrieve_single_source(request: dict, **kwargs) -> NumpyFieldList:
-    xp = importlib.import_module(os.getenv("CASCADE_ARRAY_MODULE", "numpy"))
-
     req = request.copy()
     source = req.pop("source")
     if source == "fdb":
@@ -153,88 +135,4 @@ def retrieve_single_source(request: dict, **kwargs) -> NumpyFieldList:
     assert (
         len(ret_sources) > 0
     ), f"No data retrieved from {source} for request {request}"
-    ret = FieldList.from_numpy(
-        xp.asarray(ret_sources.values),
-        list(map(GribBufferMetaData, ret_sources.metadata())),
-    )
-    return ret
-
-
-def write(loc: str, data: NumpyFieldList, grib_sets: dict):
-    target = target_from_location(loc)
-    if isinstance(target, (FileTarget, FileSetTarget)):
-        # Allows file to be appended on each write call
-        target.enable_recovery()
-    assert len(data) == 1, f"Expected single field, received {len(data)}"
-    metadata = grib_sets.copy()
-    metadata.update(data.metadata()[0]._d)
-    metadata = basic_headers(metadata)
-    set_missing = [key for key, value in metadata.items() if value == "MISSING"]
-    for missing_key in set_missing:
-        metadata.pop(missing_key)
-
-    template = data.metadata()[0].buffer_to_metadata().override(metadata)
-
-    for missing_key in set_missing:
-        template._handle.set_missing(missing_key)
-    meter, _ = metered(f"WRITE {loc}", None, True)(write_grib)(
-        target, template._handle, data[0].values
-    )
-    print(f"{str(meter)}, size: {pretty_bytes(data[0].values.nbytes)}")
-
-
-def cluster_write(
-    config,
-    scenario,
-    attribution_output,
-    cluster_dests,
-):
-    metadata, scdata, anom, cluster_att, min_dist = attribution_output
-    grib_template = metadata.buffer_to_metadata()
-    cluster_type, ind_cl, rep_members, det_index = [
-        metadata._d[x] for x in ["type", "ind_cl", "rep_members", "det_index"]
-    ]
-
-    keys, steps = get_output_keys(config, grib_template)
-    with ResourceMeter(f"WRITE {scenario}"):
-        ## Write anomalies and cluster scenarios
-        dest, adest = cluster_dests
-        target = target_from_location(dest)
-        anom_target = target_from_location(adest)
-        keys["type"] = cluster_type
-        write_cluster_attr_grib(
-            steps,
-            ind_cl,
-            rep_members,
-            det_index,
-            scdata,
-            anom,
-            cluster_att,
-            target,
-            anom_target,
-            keys,
-            ncl_dummy=config.ncl_dummy,
-        )
-
-        ## Write report output
-        # table: attribution cluster index for all fc clusters, step
-        np.savetxt(
-            pjoin(
-                config.output_root,
-                f"{config.step_start}_{config.step_end}dist_index_{scenario}.txt",
-            ),
-            min_dist,
-            fmt="%-10.5f",
-            delimiter=3 * " ",
-        )
-
-        # table: distance measure for all fc clusters, step
-        np.savetxt(
-            pjoin(
-                config.output_root,
-                f"{config.step_start}_{config.step_end}att_index_{scenario}.txt",
-            ),
-            cluster_att,
-            fmt="%-3d",
-            delimiter=3 * " ",
-        )
+    return ret_sources

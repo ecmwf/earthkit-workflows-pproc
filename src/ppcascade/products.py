@@ -43,7 +43,9 @@ def ensemble_anomaly(args: argparse.Namespace):
                 climatology.select({"type": "es"}),
                 param_config.windows.options.get("std_anomaly", False),
             )
-            .window_operation(param_config.windows)
+            .window_operation(
+                param_config.windows.operation, param_config.windows.ranges
+            )
             .ensemble_operation(
                 param_config.ensemble["operation"], **param_config.ensemble["kwargs"]
             )
@@ -86,7 +88,9 @@ def ensemble(args: argparse.Namespace):
             .param_operation(
                 param_config.param["operation"], **param_config.param["kwargs"]
             )
-            .window_operation(param_config.windows)
+            .window_operation(
+                param_config.windows.operation, param_config.windows.ranges
+            )
             .ensemble_operation(
                 param_config.ensemble["operation"], **param_config.ensemble["kwargs"]
             )
@@ -127,11 +131,13 @@ def extreme(args: argparse.Namespace):
             .param_operation(
                 param_config.param["operation"], **param_config.param["kwargs"]
             )
-            .window_operation(param_config.windows)
+            .window_operation(
+                param_config.windows.operation, param_config.windows.ranges
+            )
             .ensemble_extreme(
                 param_config.ensemble["operation"],
                 climatology,
-                param_config.windows,
+                param_config.windows.ranges,
                 **param_config.ensemble["kwargs"],
             )
             .write(

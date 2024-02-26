@@ -5,7 +5,7 @@ import copy
 from pproc.common.config import Config as BaseConfig
 from pproc.clustereps.config import FullClusterConfig
 
-from .io import _source_from_location
+from .utils.io import _source_from_location
 from .utils.request import Request, MultiSourceRequest
 from .utils.window import WindowConfig
 

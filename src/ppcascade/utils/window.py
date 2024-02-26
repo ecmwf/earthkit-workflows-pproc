@@ -15,7 +15,7 @@ class WindowConfig:
     options: dict
     ranges: list[Range] = field(default_factory=list)
 
-    # TOOD: precomputed windows, how is their EFI computed?? Do we need num steps?
+    # TODO: precomputed windows, how is their EFI computed?? Do we need num steps?
     def add_range(self, start: int, end: int, step: int = 1, allowed_steps: list = []):
         window_size = end - start
         if window_size == 0:

@@ -9,9 +9,7 @@ from cascade.fluent import MultiAction as BaseMultiAction
 from cascade.fluent import Fluent
 
 
-from .io import cluster_write, retrieve
-from .io import write as write_grib
-from .utils.window import WindowConfig, Range
+from .utils.window import Range
 from .utils.request import Request, MultiSourceRequest
 
 
@@ -31,16 +29,15 @@ class SingleAction(BaseSingleAction):
         return self.nodes.attrs.pop("grib_exclude", [])
 
     def efi(
-        self, climatology: Action, windows: WindowConfig, eps: float, dim: str = "step"
+        self, climatology: Action, windows: list[Range], eps: float, dim: str = "step"
     ):
         eps = float(eps)
-        assert len(windows.ranges) == 1
-        assert self.nodes.coords[dim] == windows.ranges[0].name
-        num_steps = len(windows.ranges[0].steps)
+        assert len(windows) == 1
+        assert self.nodes.coords[dim] == windows[0].name
         # Join with climatology and compute efi control
         payload = Payload(
             self.backend.efi,
-            (Node.input_name(1), Node.input_name(0), eps, num_steps),
+            (Node.input_name(1), Node.input_name(0), eps),
             {"control": True},
         )
         return self.join(climatology, "**datatype**").reduce(payload)
@@ -48,22 +45,21 @@ class SingleAction(BaseSingleAction):
     def sot(
         self,
         climatology: Action,
-        windows: WindowConfig,
+        windows: list[Range],
         eps: float,
         sot: list[int],
         dim: str = "step",
         new_dim: str = "sot",
     ):
         eps = float(eps)
-        assert len(windows.ranges) == 1
-        assert self.nodes.coords[dim] == windows.ranges[0].name
-        num_steps = len(windows.ranges[0].steps)
+        assert len(windows) == 1
+        assert self.nodes.coords[dim] == windows[0].name
 
         def _sot(action: Action, number: int) -> Action:
             new_sot = action.reduce(
                 Payload(
                     self.backend.sot,
-                    (Node.input_name(1), Node.input_name(0), number, eps, num_steps),
+                    (Node.input_name(1), Node.input_name(0), number, eps),
                 )
             )
             new_sot._add_dimension(new_dim, number)
@@ -96,7 +92,9 @@ class SingleAction(BaseSingleAction):
                 else:
                     assert values.data.ndim == 1
                     grib_sets[name] = values.data[0]
-            payload = Payload(write_grib, (target, Node.input_name(0), grib_sets))
+            payload = Payload(
+                self.backend.write, (target, Node.input_name(0), grib_sets)
+            )
             self.sinks.append(Node(payload, self.node()))
         return self
 
@@ -127,7 +125,7 @@ class MultiAction(BaseMultiAction):
     def extreme(
         self,
         climatology: Action,
-        windows: WindowConfig,
+        windows: list[Range],
         sot: list[int],
         eps: float,
         efi_control: bool = False,
@@ -141,7 +139,7 @@ class MultiAction(BaseMultiAction):
         Parameters
         ----------
         climatology: Action, nodes containing climatology data
-        windows: WindowConfig, contains window configuration and ranges
+        windows: list of Range, list of window ranges
         sot: list of ints, Shift-Of-Tail values
         eps: float
         efi_control: bool, whether to compute EFI for control member
@@ -171,7 +169,7 @@ class MultiAction(BaseMultiAction):
         self,
         operation: str,
         climatology: Action,
-        windows: WindowConfig,
+        windows: list[Range],
         ensemble_dim: str = "number",
         window_dim: str = "step",
         **kwargs,
@@ -189,16 +187,30 @@ class MultiAction(BaseMultiAction):
         )
 
     def efi(
-        self, climatology: Action, windows: WindowConfig, eps: float, dim: str = "step"
+        self, climatology: Action, windows: list[Range], eps: float, dim: str = "step"
     ):
+        """
+        Create nodes computing the EFI for each window. Expects ensemble member dimension
+        to already be concatenated into a single array.
+
+        Parameters
+        ----------
+        climatology: Action, nodes containing climatology data
+        windows: list of Range, list of window ranges
+        eps: float
+        dim: str, window dimension
+
+        Return
+        ------
+        MultiAction
+        """
         eps = float(eps)
 
         def _efi(action: Action, window: Range) -> Action:
-            num_steps = len(window.steps)
             ret = action.select({dim: window.name}).reduce(
                 Payload(
                     self.backend.efi,
-                    (Node.input_name(1), Node.input_name(0), eps, num_steps),
+                    (Node.input_name(1), Node.input_name(0), eps),
                 ),
                 dim="**datatype**",
             )
@@ -206,22 +218,37 @@ class MultiAction(BaseMultiAction):
 
         return self.join(
             climatology, "**datatype**", match_coord_values=True
-        ).transform(_efi, windows.ranges, dim)
+        ).transform(_efi, windows, dim)
 
     def sot(
         self,
         climatology: Action,
-        windows: WindowConfig,
+        windows: list[Range],
         eps: float,
         sot: list[int],
         dim: str = "step",
         new_dim: str = "sot",
     ):
+        """
+        Create nodes computing the SOT for each window. Expects ensemble member dimension
+        to already be concatenated into a single array.
+
+        Parameters
+        ----------
+        climatology: Action, nodes containing climatology data
+        windows: list of Range, list of window ranges
+        eps: float
+        sot: list of ints, Shift-Of-Tail values
+        dim: str, window dimension
+        new_dim: str, name of new dimension corresponding to SOT nodes.
+
+        Return
+        ------
+        MultiAction
+        """
         eps = float(eps)
 
         def _sot_windows(action: Action, window: Range) -> Action:
-            num_steps = len(window.steps)
-
             def _sot(action: Action, number: int) -> Action:
                 new_sot = action.reduce(
                     Payload(
@@ -231,7 +258,6 @@ class MultiAction(BaseMultiAction):
                             Node.input_name(0),
                             number,
                             eps,
-                            num_steps,
                         ),
                     )
                 )
@@ -241,7 +267,7 @@ class MultiAction(BaseMultiAction):
             return action.select({dim: window.name}).transform(_sot, sot, new_dim)
 
         ret = self.join(climatology, "**datatype**", match_coord_values=True).transform(
-            _sot_windows, windows.ranges, dim
+            _sot_windows, windows, dim
         )
         ret.non_descript_dim(new_dim)
         return ret
@@ -276,6 +302,7 @@ class MultiAction(BaseMultiAction):
         comparison: str,
         value: float,
         local_scale_factor: float = None,
+        edition: int = 1,  # TODO: set this properly
         dim: str = "number",
     ):
         payload = Payload(
@@ -285,7 +312,8 @@ class MultiAction(BaseMultiAction):
                 comparison,
                 float(value),
                 float(local_scale_factor) if local_scale_factor is not None else None,
-            ),  # TODO: Needs edition!!
+                edition,
+            ),
         )
         return (
             self.map(payload)
@@ -351,22 +379,23 @@ class MultiAction(BaseMultiAction):
             operation = Payload(getattr(self.backend, operation), kwargs=kwargs)
         return self.reduce(operation, dim)
 
-    def window_operation(self, windows: WindowConfig, dim: str = "step"):
-        if windows.operation is None:
-            ret = self._squeeze_dimension(dim)
-        else:
+    def window_operation(self, operation: str, ranges: list[Range], dim: str = "step"):
+        if operation is None:
+            self._squeeze_dimension(dim)
+            return self
 
-            def _window_operation(action: Action, range: Range) -> Action:
-                window_action = action.select({dim: range.steps})
-                window_action = getattr(window_action, windows.operation)(dim)
-                window_action._add_dimension(dim, range.name)
-                return window_action
+        def _window_operation(action: Action, range: Range) -> Action:
+            window_action = action.select({dim: range.steps}).reduce(
+                Payload(
+                    self.backend.window_operation,
+                    kwargs={"operation": operation, "window": range},
+                ),
+                dim,
+            )
+            window_action._add_dimension(dim, range.name)
+            return window_action
 
-            ret = self.transform(_window_operation, windows.ranges, dim)
-
-        if dim not in ret.nodes.dims:
-            ret.add_attributes({dim: windows.ranges[0].name})
-        return ret
+        return self.transform(_window_operation, ranges, dim)
 
     def pca(self, config, mask, target: str = None):
         if mask is not None:
@@ -394,11 +423,11 @@ class MultiAction(BaseMultiAction):
             np.asarray(
                 [
                     Payload(
-                        cluster_write,
+                        self.backend.cluster_write,
                         (config, "centroids", Node.input_name(0), targets["centroids"]),
                     ),
                     Payload(
-                        cluster_write,
+                        self.backend.cluster_write,
                         (
                             config,
                             "representatives",
@@ -411,32 +440,29 @@ class MultiAction(BaseMultiAction):
         )
 
     def write(self, target, config_grib_sets: dict):
-        if target != "null:":
-            coords = list(self.nodes.dims)
-            exclude = self.non_descript_dims()
-            for node_attrs in itertools.product(
-                *[self.nodes.coords[key].data for key in coords]
-            ):
-                node_coords = {
-                    key: node_attrs[index] for index, key in enumerate(coords)
-                }
-                node = self.node(node_coords)
+        coords = list(self.nodes.dims)
+        exclude = self.non_descript_dims()
+        for node_attrs in itertools.product(
+            *[self.nodes.coords[key].data for key in coords]
+        ):
+            node_coords = {key: node_attrs[index] for index, key in enumerate(coords)}
+            node = self.node(node_coords)
 
-                grib_sets = config_grib_sets.copy()
-                grib_sets.update(self.nodes.attrs)
-                grib_sets.update(
-                    {k: v for k, v in node_coords.items() if k not in exclude}
+            grib_sets = config_grib_sets.copy()
+            grib_sets.update(self.nodes.attrs)
+            grib_sets.update({k: v for k, v in node_coords.items() if k not in exclude})
+            self.sinks.append(
+                Node(
+                    Payload(
+                        self.backend.write, (target, Node.input_name(0), grib_sets)
+                    ),
+                    node,
                 )
-                self.sinks.append(
-                    Node(
-                        Payload(write_grib, (target, Node.input_name(0), grib_sets)),
-                        node,
-                    )
-                )
+            )
         return self
 
 
-from .backend import NumpyFieldListBackend
+from .backends.fieldlist import NumpyFieldListBackend
 
 
 class PProcFluent(Fluent):
@@ -460,7 +486,7 @@ class PProcFluent(Fluent):
             for indices, new_request in request.expand():
                 payloads[indices] = (new_request,)
             new_action = super().source(
-                retrieve,
+                self.backend.retrieve,
                 xr.DataArray(
                     payloads,
                     coords={key: list(request[key]) for key in request.dims.keys()},

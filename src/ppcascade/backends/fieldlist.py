@@ -1,19 +1,35 @@
 import array_api_compat
 import numpy as np
+from meters import metered
+from os.path import join as pjoin
 
 from meteokit import extreme
 from meteokit.stats import iter_quantiles
 from earthkit.data import FieldList
 from earthkit.data.sources.numpy_list import NumpyFieldList
+from pproc.common.io import (
+    target_from_location,
+    write_grib,
+    FileTarget,
+    FileSetTarget,
+)
 from pproc.common.resources import ResourceMeter
 from pproc import clustereps
 from pproc.clustereps.utils import normalise_angles
 from pproc.clustereps.io import read_steps_grib
 from cascade.backends.base import BaseBackend
+from pproc.clustereps.__main__ import write_cluster_attr_grib
+from pproc.clustereps.cluster import get_output_keys
 
-from .grib import extreme_grib_headers, threshold_grib_headers
-from .wrappers.metadata import GribBufferMetaData
-from .utils.patch import PatchModule
+from ppcascade.utils.grib import (
+    window_grib_headers,
+    extreme_grib_headers,
+    threshold_grib_headers,
+)
+from ppcascade.wrappers.metadata import GribBufferMetaData
+from ppcascade.utils.patch import PatchModule
+from ppcascade.utils.window import Range
+from ppcascade.utils.io import retrieve as ek_retrieve
 
 
 def standardise_output(data):
@@ -163,6 +179,13 @@ class NumpyFieldListBackend(BaseBackend):
         norm = xp.sqrt(vals[0] ** 2 + vals[1] ** 2)
         return FieldList.from_numpy(standardise_output(norm), arrays[0][0].metadata())
 
+    def window_operation(*arrays: list[NumpyFieldList], operation: str, window: Range):
+        grib_headers = window_grib_headers(operation, window)
+        ret = getattr(NumpyFieldListBackend, operation)(*arrays)
+        return FieldList.from_numpy(
+            ret.values, ret[0].metadata().override(grib_headers)
+        )
+
     def threshold(
         arr: NumpyFieldList,
         comparison: str,
@@ -185,16 +208,14 @@ class NumpyFieldListBackend(BaseBackend):
         clim: NumpyFieldList,
         ens: NumpyFieldList,
         eps: float,
-        num_steps: int,
         control: bool = False,
     ) -> NumpyFieldList:
-        extreme_headers = extreme_grib_headers(clim, ens, num_steps)
+        extreme_headers = extreme_grib_headers(clim, ens)
         if control:
             extreme_headers.update({"marsType": "efic", "totalNumber": 1, "number": 0})
-            metadata = ens[0].metadata().override(extreme_headers)
         else:
             extreme_headers.update({"marsType": "efi", "efiOrder": 0, "number": 0})
-            metadata = ens[0].metadata().override(extreme_headers)
+        metadata = ens[0].metadata().override(extreme_headers)
 
         xp = array_api_compat.array_namespace(ens.values, clim.values)
         with PatchModule(extreme, "numpy", xp):
@@ -206,9 +227,8 @@ class NumpyFieldListBackend(BaseBackend):
         ens: NumpyFieldList,
         number: int,
         eps: float,
-        num_steps: int,
     ) -> NumpyFieldList:
-        extreme_headers = extreme_grib_headers(clim, ens, num_steps)
+        extreme_headers = extreme_grib_headers(clim, ens)
         if number == 90:
             efi_order = 99
         elif number == 10:
@@ -383,3 +403,88 @@ class NumpyFieldListBackend(BaseBackend):
             )
 
         return (metadata, scdata, anom, cluster_att, min_dist)
+
+    def retrieve(request: dict | list[dict], **kwargs):
+        res = ek_retrieve(request, **kwargs)
+        ret = FieldList.from_numpy(
+            np.asarray(res.values),
+            list(map(GribBufferMetaData, res.metadata())),
+        )
+        return ret
+
+    def write(loc: str, data: NumpyFieldList, grib_sets: dict):
+        target = target_from_location(loc)
+        if isinstance(target, (FileTarget, FileSetTarget)):
+            # Allows file to be appended on each write call
+            target.enable_recovery()
+        assert len(data) == 1, f"Expected single field, received {len(data)}"
+        metadata = grib_sets.copy()
+        metadata.update(data.metadata()[0]._d)
+        set_missing = [key for key, value in metadata.items() if value == "MISSING"]
+        for missing_key in set_missing:
+            metadata.pop(missing_key)
+
+        template = data.metadata()[0].buffer_to_metadata().override(metadata)
+
+        for missing_key in set_missing:
+            template._handle.set_missing(missing_key)
+        meter, _ = metered(f"WRITE {loc}", None, True)(write_grib)(
+            target, template._handle, data[0].values
+        )
+        print(f"{str(meter)}")
+
+    def cluster_write(
+        config,
+        scenario,
+        attribution_output,
+        cluster_dests,
+    ):
+        metadata, scdata, anom, cluster_att, min_dist = attribution_output
+        grib_template = metadata.buffer_to_metadata()
+        cluster_type, ind_cl, rep_members, det_index = [
+            metadata._d[x] for x in ["type", "ind_cl", "rep_members", "det_index"]
+        ]
+
+        keys, steps = get_output_keys(config, grib_template)
+        with ResourceMeter(f"WRITE {scenario}"):
+            ## Write anomalies and cluster scenarios
+            dest, adest = cluster_dests
+            target = target_from_location(dest)
+            anom_target = target_from_location(adest)
+            keys["type"] = cluster_type
+            write_cluster_attr_grib(
+                steps,
+                ind_cl,
+                rep_members,
+                det_index,
+                scdata,
+                anom,
+                cluster_att,
+                target,
+                anom_target,
+                keys,
+                ncl_dummy=config.ncl_dummy,
+            )
+
+            ## Write report output
+            # table: attribution cluster index for all fc clusters, step
+            np.savetxt(
+                pjoin(
+                    config.output_root,
+                    f"{config.step_start}_{config.step_end}dist_index_{scenario}.txt",
+                ),
+                min_dist,
+                fmt="%-10.5f",
+                delimiter=3 * " ",
+            )
+
+            # table: distance measure for all fc clusters, step
+            np.savetxt(
+                pjoin(
+                    config.output_root,
+                    f"{config.step_start}_{config.step_end}att_index_{scenario}.txt",
+                ),
+                cluster_att,
+                fmt="%-3d",
+                delimiter=3 * " ",
+            )
