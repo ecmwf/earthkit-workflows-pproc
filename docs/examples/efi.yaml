@@ -39,14 +39,14 @@ parameters:
             type: cf
             interpolate: *base_interp_tp
           - <<: *base_keys_tp
-            date: "20240222"
-            time: 12
+            date: "20240226"
+            time: 00
             stream: enfo
             type: pf
             interpolate: *base_interp_tp
         clim:
           <<: *base_keys_tp
-          date: "20240222"
+          date: "20240226"
           time: '00'
           stream: efhs
           type: cd
