@@ -2,6 +2,7 @@ import sys
 import os
 import argparse
 import functools
+from meters import ResourceMeter
 
 from cascade.cascade import Cascade
 from cascade.executors.dask import DaskLocalExecutor
@@ -42,8 +43,10 @@ def graph_from_request(args):
         config_file = f"{args.output_root}/{product}.yaml"
         config.to_yaml(config_file)
         product_args = options.args(config.graph_product, config_file)
-        graph += Cascade.graph(config.graph_product, product_args)
-    deduplicate_nodes(graph)
+        graph += Cascade.graph(config.graph_product, product_args, deduplicate=False)
+
+    with ResourceMeter("Merge graphs"):
+        deduplicate_nodes(graph)
     return graph
 
 
@@ -77,6 +80,9 @@ def main(sys_args):
     )
 
     dask_group = parser.add_argument_group("dask", "Dask execution options")
+    dask_group.add_argument(
+        "--execute", default=False, action="store_true", help="Execute graph"
+    )
     dask_group.add_argument(
         "--memory",
         default="10GB",
@@ -138,13 +144,14 @@ def main(sys_args):
             hierarchical_layout=False,
         )
         pyvis_graph.show(f"{args.output_root}/graph.html")
-    DaskLocalExecutor.execute(
-        graph,
-        n_workers=args.workers,
-        threads_per_worker=args.threads_per_worker,
-        memory_limit=args.memory,
-        report=f"{args.output_root}/dask_report.html",
-    )
+    if args.execute:
+        DaskLocalExecutor.execute(
+            graph,
+            n_workers=args.workers,
+            threads_per_worker=args.threads_per_worker,
+            memory_limit=args.memory,
+            report=f"{args.output_root}/dask_report.html",
+        )
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 global:
   members:
-    end: 5
+    end: 3
     start: 1
 common:
   interpolate:
@@ -115,7 +115,7 @@ products:
             type: pf
         mars:
           ens:
-            type: pf
+            type: pf     
     params:
       131060: 
         param: 
@@ -239,8 +239,8 @@ products:
           operation: threshold_prob
           comparison: ">="
           value: 0.025
-          stepType: accum
         grib_set:
+          stepType: accum
           stepRange: 0-0
           edition: 2
           scaleFactorOfLowerLimit: 0
@@ -261,8 +261,8 @@ products:
           operation: threshold_prob
           comparison: ">="
           value: 0.05
+        grib_set:           
           stepType: accum
-        grib_set: 
           stepRange: 0-0
           edition: 2
           scaleFactorOfLowerLimit: 0
@@ -283,8 +283,8 @@ products:
           operation: threshold_prob
           comparison: ">="
           value: 0.1
-          stepType: accum
         grib_set: 
+          stepType: accum
           stepRange: 0-0
           edition: 2
           scaleFactorOfLowerLimit: 0
@@ -330,12 +330,12 @@ products:
           value: 273.15
           local_scale_factor: 2
         windows: 
-          operation: minimum
+          operation: min
       131070:
         param:
           id: 123
         steps: 
-          - [6, 240, 6]
+          - [6, 360, 6]
         ensemble:
           operation: threshold_prob
           comparison: '>='
@@ -344,7 +344,7 @@ products:
         param:
           id: 123
         steps: 
-          - [6, 240, 6]
+          - [6, 360, 6]
         ensemble:
           operation: threshold_prob
           comparison: '>='
@@ -353,7 +353,7 @@ products:
         param:
           id: 123
         steps: 
-          - [6, 240, 6]
+          - [6, 360, 6]
         ensemble:
           operation: threshold_prob
           comparison: '>='
@@ -362,7 +362,7 @@ products:
         param:
           id: 123
         steps: 
-          - [6, 240, 6]
+          - [6, 360, 6]
         ensemble:
           operation: threshold_prob
           comparison: '>='
@@ -431,6 +431,60 @@ products:
           operation: threshold_prob
           comparison: '>='
           value: 8
+      131078:
+        param:
+          id: 140232
+        steps:
+          - [12, 240, 12]
+          - [123, 144, 3]
+          - [150, 240, 6]
+          - [228, 360, 12]
+          - [246, 360, 6]
+        grib_set:
+          timeRangeIndicator: 0
+        ensemble:
+          operation: threshold_prob
+          comparison: '>='
+          value: 8
+      131079:
+        param:
+          id: 140232
+        steps:
+          - [12, 240, 12]
+          - [123, 144, 3]
+          - [150, 240, 6]
+          - [228, 360, 12]
+          - [246, 360, 6]
+        ensemble:
+          operation: threshold_prob
+          comparison: '>='
+          value: 10
+      131080:
+        param:
+          id: 140232
+        steps:
+          - [12, 240, 12]
+          - [123, 144, 3]
+          - [150, 240, 6]
+          - [228, 360, 12]
+          - [246, 360, 6]
+        ensemble:
+          operation: threshold_prob
+          comparison: '>='
+          value: 12
+      131081:
+        param:
+          id: 140232
+        steps:
+          - [12, 240, 12]
+          - [123, 144, 3]
+          - [150, 240, 6]
+          - [228, 360, 12]
+          - [246, 360, 6]
+        ensemble:
+          operation: threshold_prob
+          comparison: '>='
+          value: 15
       131022: # t850
         steps:
           - [0, 360, 12]
@@ -439,16 +493,20 @@ products:
         sources:
           fdb:
             ens:
-              type: cf/pf
+              - type: cf
+              - type: pf
             clim:
               stream: efhs
-              type: em/es
+              type: [em, es]
+              time: 00
           mars:
             ens:
-              type: cf/pf
+              - type: cf
+              - type: pf
             clim:
               stream: efhs
-              type: em/es
+              type: [em, es]
+              time: 00
         ensemble:
           operation: threshold_prob
           comparison: <
@@ -457,6 +515,178 @@ products:
           bitsPerValue: 24
         windows:
           operation: mean 
+      131020: # t850
+        steps:
+          - [0, 360, 12]
+        param: 
+          id: 130
+        sources:
+          fdb:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+          mars:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+        ensemble:
+          operation: threshold_prob
+          comparison: "<"
+          value: -2
+        grib_set:
+          bitsPerValue: 24
+        windows:
+          operation: mean
+      131021: # t850
+        steps:
+          - [0, 360, 12]
+        param: 
+          id: 130
+        sources:
+          fdb:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+          mars:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+        ensemble:
+          operation: threshold_prob
+          comparison: ">="
+          value: 2
+        grib_set:
+          bitsPerValue: 24
+        windows:
+          operation: mean
+      131022: # t850
+        steps:
+          - [0, 360, 12]
+        param: 
+          id: 130
+        sources:
+          fdb:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+          mars:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+        ensemble:
+          operation: threshold_prob
+          comparison: "<"
+          value: -8
+        grib_set:
+          bitsPerValue: 24
+      131023: # t850
+        steps:
+          - [0, 360, 12]
+        param: 
+          id: 130
+        sources:
+          fdb:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+          mars:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+        ensemble:
+          operation: threshold_prob
+          comparison: "<"
+          value: -4
+        grib_set:
+          bitsPerValue: 24
+      131024: # t850
+        steps:
+          - [0, 360, 12]
+        param: 
+          id: 130
+        sources:
+          fdb:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+          mars:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+        ensemble:
+          operation: threshold_prob
+          comparison: ">"
+          value: -4
+        grib_set:
+          bitsPerValue: 24
+      131025: # t850
+        steps:
+          - [0, 360, 12]
+        param: 
+          id: 130
+        sources:
+          fdb:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+          mars:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+        ensemble:
+          operation: threshold_prob
+          comparison: ">"
+          value: 8
+        grib_set:
+          bitsPerValue: 24
       133093: # t850
         steps:
           - [0, 360, 12]
@@ -465,20 +695,229 @@ products:
         sources:
           fdb:
             ens:
-              type: cf/pf
+              - type: cf
+              - type: pf
             clim:
               stream: efhs
-              type: em/es
+              type: [em, es]
+              time: 00
           mars:
             ens:
-              type: cf/pf
+              - type: cf
+              - type: pf
             clim:
               stream: efhs
-              type: em/es
+              type: [em, es]
+              time: 00
         ensemble:
           operation: threshold_prob
           comparison: ">"
-          value: -1
+          value: 1
+        grib_set:
+          localDefinitionNumber: 30
+          bitsPerValue: 24
+          edition: 2
+          typeOfGeneratingProcess: 5
+          paramId: 0
+          timeIncrement: 12
+          indicatorOfUnitForTimeIncrement: 1
+          typeOfStatisticalProcessing: 10
+          packingType: grid_ccsds
+          scaleFactorOfUpperLimit: MISSING
+          scaledValueOfUpperLimit: MISSING
+        windows:
+          operation: mean
+          std_anomaly: True
+      133094: # t850
+        steps:
+          - [0, 360, 12]
+        param: 
+          id: 130
+        sources:
+          fdb:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+          mars:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+        ensemble:
+          operation: threshold_prob
+          comparison: ">"
+          value: 1.5
+        grib_set:
+          localDefinitionNumber: 30
+          bitsPerValue: 24
+          edition: 2
+          typeOfGeneratingProcess: 5
+          paramId: 0
+          timeIncrement: 12
+          indicatorOfUnitForTimeIncrement: 1
+          typeOfStatisticalProcessing: 10
+          packingType: grid_ccsds
+          scaleFactorOfUpperLimit: MISSING
+          scaledValueOfUpperLimit: MISSING
+        windows:
+          operation: mean
+          std_anomaly: True
+      133095: # t850
+        steps:
+          - [0, 360, 12]
+        param: 
+          id: 130
+        sources:
+          fdb:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+          mars:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+        ensemble:
+          operation: threshold_prob
+          comparison: ">"
+          value: 2
+        grib_set:
+          localDefinitionNumber: 30
+          bitsPerValue: 24
+          edition: 2
+          typeOfGeneratingProcess: 5
+          paramId: 0
+          timeIncrement: 12
+          indicatorOfUnitForTimeIncrement: 1
+          typeOfStatisticalProcessing: 10
+          packingType: grid_ccsds
+          scaleFactorOfUpperLimit: MISSING
+          scaledValueOfUpperLimit: MISSING
+        windows:
+          operation: mean
+          std_anomaly: True
+      133096: # t850
+        steps:
+          - [0, 360, 12]
+        param: 
+          id: 130
+        sources:
+          fdb:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+          mars:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+        ensemble:
+          operation: threshold_prob
+          comparison: "<-1"
+          value: 1
+        grib_set:
+          localDefinitionNumber: 30
+          bitsPerValue: 24
+          edition: 2
+          typeOfGeneratingProcess: 5
+          paramId: 0
+          timeIncrement: 12
+          indicatorOfUnitForTimeIncrement: 1
+          typeOfStatisticalProcessing: 10
+          packingType: grid_ccsds
+          scaleFactorOfUpperLimit: MISSING
+          scaledValueOfUpperLimit: MISSING
+        windows:
+          operation: mean
+          std_anomaly: True
+      133097: # t850
+        steps:
+          - [0, 360, 12]
+        param: 
+          id: 130
+        sources:
+          fdb:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+          mars:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+        ensemble:
+          operation: threshold_prob
+          comparison: "<"
+          value: -1.5
+        grib_set:
+          localDefinitionNumber: 30
+          bitsPerValue: 24
+          edition: 2
+          typeOfGeneratingProcess: 5
+          paramId: 0
+          timeIncrement: 12
+          indicatorOfUnitForTimeIncrement: 1
+          typeOfStatisticalProcessing: 10
+          packingType: grid_ccsds
+          scaleFactorOfUpperLimit: MISSING
+          scaledValueOfUpperLimit: MISSING
+        windows:
+          operation: mean
+          std_anomaly: True
+      133098: # t850
+        steps:
+          - [0, 360, 12]
+        param: 
+          id: 130
+        sources:
+          fdb:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+          mars:
+            ens:
+              - type: cf
+              - type: pf
+            clim:
+              stream: efhs
+              type: [em, es]
+              time: 00
+        ensemble:
+          operation: threshold_prob
+          comparison: "<"
+          value: -2
         grib_set:
           localDefinitionNumber: 30
           bitsPerValue: 24
@@ -576,7 +1015,7 @@ products:
           localDefinitionNumber: 19
           timeRangeIndicator: 2
         windows:
-          operation: minimum
+          operation: min
       132201:
         param:
           id: 121
@@ -594,7 +1033,7 @@ products:
           localDefinitionNumber: 19
           timeRangeIndicator: 2
         windows:
-          operation: maximum
+          operation: max
       132165:
         param:
           id: 207
@@ -612,7 +1051,7 @@ products:
           localDefinitionNumber: 19
           timeRangeIndicator: 3
         windows:
-          operation: maximum
+          operation: max
       132049:
         param:
           id: 123
@@ -630,7 +1069,7 @@ products:
           localDefinitionNumber: 19
           timeRangeIndicator: 2
         windows:
-          operation: maximum
+          operation: max
       132216:
         steps: 
         - [0, 360, 6]
@@ -651,7 +1090,7 @@ products:
           localDefinitionNumber: 19
           timeRangeIndicator: 2
         windows:
-          operation: maximum
+          operation: max
       132228:
         steps:
         - [0, 360, 6]
@@ -699,7 +1138,7 @@ products:
           indicatorOfParameter: 45
           localDefinitionNumber: 19
           timeRangeIndicator: 3
-        window: 
+        windows: 
           operation: mean
       132059:
         steps:
@@ -725,7 +1164,7 @@ products:
           timeRangeIndicator: 2
           typeOfStatisticalProcessing: 1  
         windows:
-          operation: maximum
+          operation: max
       132044:
         steps:
         - [0, 360, 6]
@@ -751,4 +1190,4 @@ products:
           gribTablesVersionNo: 132
           localDefinitionNumber: 19
         windows:
-          operation: maximum
+          operation: max

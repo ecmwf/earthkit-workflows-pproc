@@ -55,11 +55,13 @@ class ComputeRequest:
         base_request: dict,
     ):
         self.param = param
-        self.type = param_type
-        if isinstance(steps[0], int):
-            self.steps = [steps]
-        else:
-            self.steps = [x.split("-") if "-" in x else [x, x] for x in steps]
+        self.type = param_type.lower()
+        self.steps = []
+        for step in steps:
+            try:
+                self.steps.append(int(step))
+            except ValueError:
+                self.steps.append(step)
         self.grid = grid
         self.target = target
         self.base_request = base_request
@@ -69,10 +71,9 @@ def expand(value_list):
     if RANGE_INDICATOR in value_list:
         interval_range = value_list.split(LIST_SEPARATOR)
         if len(interval_range) == 3:
-            start, _, end = interval_range
-            return [int(start), int(end)]
+            raise NotImplementedError("Interval range with increment not implemented.")
         start, _, end, _, interval = interval_range
-        return [int(start), int(end), int(interval)]
+        return list(range(int(start), int(end) + 1, int(interval)))
     return value_list.split(LIST_SEPARATOR)
 
 
@@ -116,7 +117,9 @@ def parse_request(filename: str):
                 for pair in kv_pairs:
                     try:
                         key, value = pair.split(KV_SEPARATOR)
-                        new_request[key.lstrip(" ").lstrip("\t")] = value.rstrip("\n")
+                        new_request[
+                            key.lstrip(" ").rstrip(" ").lstrip("\t").lower()
+                        ] = (value.lstrip(" ").rstrip("\n").lower())
                     except ValueError:
                         pass
                 if NEW_LINE not in line:

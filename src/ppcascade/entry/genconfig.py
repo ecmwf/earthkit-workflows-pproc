@@ -58,7 +58,8 @@ class ProductConfig:
         request: ComputeRequest,
         additional_updates: dict | None = None,
     ):
-        config = {**common, "target": request.target}
+        config = copy.deepcopy(common)
+        config["target"] = request.target
         deep_update(config, param)
         base_interp = config.pop("interpolate")
         param_id = config["param"].pop("id")
@@ -68,11 +69,15 @@ class ProductConfig:
         config.setdefault("grib_set", {})
 
         if config["windows"].get("operation", None) == "diff":
+            windows = [x.split("-") for x in request.steps]
             config["windows"]["ranges"] = [
-                [int(x[0]), int(x[1]), int(x[1]) - int(x[0])] for x in request.steps
+                [int(x[0]), int(x[1]), int(x[1]) - int(x[0])] for x in windows
             ]
         else:
-            config["windows"]["ranges"] = request.steps
+            config["windows"]["ranges"] = [
+                [x, x] if isinstance(x, int) else list(map(int, x.split("-")))
+                for x in request.steps
+            ]
         if request.grid is not None or request.base_request[MarsKey.LEVTYPE] == "pl":
             interpolation_keys = copy.deepcopy(base_interp)
             if request.grid is not None:
@@ -81,6 +86,7 @@ class ProductConfig:
         config["sources"] = self._create_sources(
             param_id, config.pop("sources", {}), request.base_request
         )
+
         if "ensemble" in config and isinstance(config["ensemble"]["operation"], dict):
             config["ensemble"]["operation"] = config["ensemble"]["operation"][
                 request.type
@@ -91,20 +97,18 @@ class ProductConfig:
 
     def _create_sources(self, param_id: str, sources: dict, base_request: dict):
         for src, values in sources.items():
+            src_keys = {"domain": "g"} if src == "fdb" else {}
             for param_type, param_keys in values.items():
                 if isinstance(param_keys, dict):
                     sources[src][param_type] = {
                         **base_request,
                         "param": param_id,
                         **param_keys,
+                        **src_keys,
                     }
                 else:
                     sources[src][param_type] = [
-                        {
-                            **base_request,
-                            "param": param_id,
-                            **x,
-                        }
+                        {**base_request, "param": param_id, **x, **src_keys}
                         for x in sources[src][param_type]
                     ]
         return sources
@@ -153,8 +157,9 @@ class ExtremeConfig(ProductConfig):
                                 "date": ExtremeConfig.clim_date(
                                     request.base_request[MarsKey.DATE]
                                 ),
+                                "time": "00",
                                 "step": {
-                                    f"{x[0]}-{x[1]}": ExtremeConfig.clim_step(
+                                    x: ExtremeConfig.clim_step(
                                         x, request.base_request[MarsKey.TIME]
                                     )
                                     for x in request.steps
@@ -168,7 +173,7 @@ class ExtremeConfig(ProductConfig):
 
     @staticmethod
     def clim_date(date_str: str):
-        date = datetime.strptime(date_str, "%Y%m%d%H")
+        date = datetime.strptime(date_str, "%Y%m%d")
         weekday = date.weekday()
         # friday to monday -> take previous monday clim, else previous thursday clim
         if weekday == 0 or weekday > 3:
@@ -185,7 +190,7 @@ class ExtremeConfig(ProductConfig):
 
     @staticmethod
     def clim_step(interval, time: str, extended: bool = False):
-        start, end = map(int, interval)
+        start, end = map(int, interval.split("-"))
         clim_relative_time = start + int(time)
         if time == "12":
             clim_relative_time = start - int(time)
@@ -251,8 +256,7 @@ class ForecastConfig(ProductConfig):
     ):
         request.base_request[MarsKey.TYPE] = request.type
         if request.type == ProductType.PERTURBED_FORECAST:
-            start, end = request.base_request[MarsKey.NUMBER]
-            request.base_request[MarsKey.NUMBER] = list(range(start, end + 1))
+            request.base_request[MarsKey.NUMBER] = request.base_request[MarsKey.NUMBER]
         return super().add_param(common, param, request, additional_updates)
 
 
@@ -271,13 +275,13 @@ class EnsembleAnomalyConfig(ProductConfig):
         )
         steps = []
         for step_range in request.steps:
-            if len(step_range) == 3:
-                steps.extend(range(step_range[0], step_range[1] + 1, step_range[2]))
+            if isinstance(step_range, int):
+                steps.append(step_range)
             else:
-                assert (
-                    len(set(step_range)) == 1
-                ), f"Expected range to consist of single step. Got {step_range}"
-                steps.append(int(step_range[0]))
+                steps.extend(
+                    range(int(step_range[0]), int(step_range[1]) + 1, 12)
+                )  # TODO: 12 is hardcoded
+
         for src in common["sources"].keys():
             deep_update(
                 param,
@@ -288,6 +292,7 @@ class EnsembleAnomalyConfig(ProductConfig):
                                 "date": EnsembleAnomalyConfig.clim_date(
                                     request.base_request[MarsKey.DATE]
                                 ),
+                                "time": "00",
                                 "step": {
                                     x: EnsembleAnomalyConfig.clim_step(
                                         x, request.base_request[MarsKey.TIME]
@@ -307,7 +312,7 @@ class EnsembleAnomalyConfig(ProductConfig):
         Assumes climatology run on Monday and Thursday and retrieves most recent
         date climatology available
         """
-        date = datetime.strptime(date_str, "%Y%m%d%H")
+        date = datetime.strptime(date_str, "%Y%m%d")
         dow = date.weekday()
         if dow >= 0 and dow < 3:
             return (date - timedelta(days=dow)).strftime("%Y%m%d")

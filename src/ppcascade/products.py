@@ -9,7 +9,7 @@ from .config import (
 )
 
 
-def ensemble_anomaly(args: argparse.Namespace):
+def ensemble_anomaly(args: argparse.Namespace, deduplicate: bool = True):
     """
     Generate graph for ensemble member anomaly products e.g. threshold probabilities
     for t850. Input parameters args must contain the following attributes:
@@ -20,6 +20,7 @@ def ensemble_anomaly(args: argparse.Namespace):
     Parameters
     ----------
     args: argparse.Namespace containing attributes listed above
+    deplicate: bool, whether to deduplicate nodes the graph, default is True
 
     Returns
     -------
@@ -56,10 +57,12 @@ def ensemble_anomaly(args: argparse.Namespace):
             .graph()
         )
 
-    return deduplicate_nodes(total_graph)
+    if deduplicate:
+        return deduplicate_nodes(total_graph)
+    return total_graph
 
 
-def ensemble(args: argparse.Namespace):
+def ensemble(args: argparse.Namespace, deduplicate: bool = True):
     """
     Generate graph for ensemble member processing products e.g. ensms,
     quantiles, threshold probabilties. Input parameters
@@ -70,6 +73,7 @@ def ensemble(args: argparse.Namespace):
     Parameters
     ----------
     args: argparse.Namespace containing attributes listed above
+    deduplicate: bool, whether to deduplicate nodes the graph, default is True
 
     Returns
     -------
@@ -100,10 +104,13 @@ def ensemble(args: argparse.Namespace):
             )
             .graph()
         )
-    return deduplicate_nodes(total_graph)
+
+    if deduplicate:
+        return deduplicate_nodes(total_graph)
+    return total_graph
 
 
-def extreme(args: argparse.Namespace):
+def extreme(args: argparse.Namespace, deduplicate: bool = True):
     """
     Generate graph for EFI/SOT products. Input parameters
     args must contain the following attributes:
@@ -114,6 +121,7 @@ def extreme(args: argparse.Namespace):
     Parameters
     ----------
     args: argparse.Namespace containing attributes listed above
+    deduplicate: bool, whether to deduplicate nodes the graph, default is True
 
     Returns
     -------
@@ -147,10 +155,12 @@ def extreme(args: argparse.Namespace):
             .graph()
         )
 
-    return deduplicate_nodes(total_graph)
+    if deduplicate:
+        return deduplicate_nodes(total_graph)
+    return total_graph
 
 
-def clustereps(args: argparse.Namespace) -> Graph:
+def clustereps(args: argparse.Namespace, deduplicate: bool = True) -> Graph:
     """
     Generate graph for clustereps related products. Input parameters
     args must contain the following attributes:
@@ -173,6 +183,7 @@ def clustereps(args: argparse.Namespace) -> Graph:
     Parameters
     ----------
     args: argparse.Namespace containing attributes listed above
+    deduplicate: bool, whether to deduplicate nodes the graph, default is True
 
     Returns
     -------
@@ -206,7 +217,10 @@ def clustereps(args: argparse.Namespace) -> Graph:
         )
         .graph()
     )
-    return deduplicate_nodes(total_graph)
+
+    if deduplicate:
+        return deduplicate_nodes(total_graph)
+    return total_graph
 
 
 GRAPHS = [ensemble_anomaly, ensemble, extreme, clustereps]

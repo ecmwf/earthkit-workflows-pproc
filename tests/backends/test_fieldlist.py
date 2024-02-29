@@ -6,6 +6,7 @@ from earthkit.data import FieldList
 from earthkit.data.core.metadata import RawMetadata
 
 from ppcascade.backends.fieldlist import NumpyFieldListBackend
+from ppcascade.utils.window import Range
 
 
 class MockMetaData(RawMetadata):
@@ -52,6 +53,7 @@ def test_multi_arg(func):
         NumpyFieldListBackend.multiply,
         NumpyFieldListBackend.divide,
         NumpyFieldListBackend.norm,
+        NumpyFieldListBackend.diff,
     ],
 )
 def test_two_arg(func):
@@ -59,6 +61,16 @@ def test_two_arg(func):
     unnested = func(*arr)
     nested = func(NumpyFieldListBackend.concat(*arr))
     assert np.all(unnested.values == nested.values)
+
+
+@pytest.mark.parametrize(
+    "func",
+    ["add", "subtract", "multiply", "divide", "norm", "diff"],
+)
+def test_window_operation(func):
+    arr = tuple([random_fieldlist(1, 5) for _ in range(2)])
+    kwargs = {"operation": func, "window": Range(name="156-180", steps=[156, 180])}
+    NumpyFieldListBackend.window_operation(*arr, **kwargs)
 
 
 @pytest.mark.parametrize(

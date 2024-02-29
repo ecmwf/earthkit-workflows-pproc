@@ -51,4 +51,3 @@ def test_multiprocess(tmpdir):
 
     for future in fut.as_completed(futures):
         data = future.result()
-        write(f"{tmpdir}/test.grib", data, {"step": 12})

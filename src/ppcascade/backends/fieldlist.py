@@ -127,8 +127,10 @@ class NumpyFieldListBackend(BaseBackend):
         )
 
     def diff(*arrays: list[NumpyFieldList], extract_keys: tuple = ()) -> NumpyFieldList:
+        args = list(arrays)
+        args.reverse()
         return NumpyFieldListBackend.two_arg_function(
-            "subtract", *arrays.reverse(), extract_keys=extract_keys
+            "subtract", *args, extract_keys=extract_keys
         )
 
     def multiply(
@@ -413,6 +415,8 @@ class NumpyFieldListBackend(BaseBackend):
         return ret
 
     def write(loc: str, data: NumpyFieldList, grib_sets: dict):
+        if loc == "null:":
+            return
         target = target_from_location(loc)
         if isinstance(target, (FileTarget, FileSetTarget)):
             # Allows file to be appended on each write call

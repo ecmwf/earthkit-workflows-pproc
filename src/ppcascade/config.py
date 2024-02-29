@@ -92,11 +92,12 @@ class ParamConfig:
         if accumulated:
             window_ranges = [w.name for w in self.windows.ranges]
             clim_req["step"] = list(set(map(steps.get, window_ranges, window_ranges)))
+            assert len(clim_req["step"]) == len(window_ranges)
         else:
-            window_steps = [
-                list(map(steps.get, w.steps, w.steps)) for w in self.windows.ranges
-            ]
-            clim_req["step"] = sorted(set(sum(window_steps[1:], window_steps[0])))
+            window_steps = [w.steps for w in self.windows.ranges]
+            window_steps = sorted(set(sum(window_steps[1:], window_steps[0])))
+            clim_req["step"] = list(map(steps.get, window_steps, window_steps))
+            assert len(clim_req["step"]) == len(window_steps)
         if len(clim_req["step"]) == 1:
             clim_req["step"] = clim_req["step"][0]
         return [clim_req]

@@ -47,17 +47,18 @@ class Request:
             self.fake_dims.append(key)
 
     def expand(self):
-        for params in itertools.product(*[self.request[x] for x in self.dims.keys()]):
+        reqs = [self.request[x] for x in self.dims.keys()]
+        for indices, params in zip(
+            itertools.product(*(range(len(x)) for x in reqs)), itertools.product(*reqs)
+        ):
             new_request = self.request.copy()
-            indices = []
             for index, expand_param in enumerate(self.dims.keys()):
                 new_request[expand_param] = params[index]
-                indices.append(list(self.request[expand_param]).index(params[index]))
 
             # Remove fake dims from request
             for dim in self.fake_dims:
                 new_request.pop(dim)
-            yield tuple(indices), new_request
+            yield indices, new_request
 
 
 class MultiSourceRequest(Request):

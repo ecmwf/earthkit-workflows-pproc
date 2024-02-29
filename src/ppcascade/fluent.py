@@ -247,6 +247,8 @@ class MultiAction(BaseMultiAction):
         MultiAction
         """
         eps = float(eps)
+        if not isinstance(sot, list):
+            sot = [sot]
 
         def _sot_windows(action: Action, window: Range) -> Action:
             def _sot(action: Action, number: int) -> Action:
@@ -264,7 +266,9 @@ class MultiAction(BaseMultiAction):
                 new_sot._add_dimension(new_dim, number)
                 return new_sot
 
-            return action.select({dim: window.name}).transform(_sot, sot, new_dim)
+            return action.select({dim: window.name}).transform(
+                _sot, list(map(int, sot)), new_dim
+            )
 
         ret = self.join(climatology, "**datatype**", match_coord_values=True).transform(
             _sot_windows, windows, dim

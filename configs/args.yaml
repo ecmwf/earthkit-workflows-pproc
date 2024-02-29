@@ -2,7 +2,7 @@ extreme:
   forecast: "fdb:ens"
   climatology: "fdb:clim"
 ensemble:
-  forecast: "mars:ens"
+  forecast: "fdb:ens"
 ensemble_anomaly:
   forecast: "fdb:ens"
   climatology: "fdb:clim"
