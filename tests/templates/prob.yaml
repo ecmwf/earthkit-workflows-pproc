@@ -186,7 +186,7 @@ parameters:
     steps:
       - [126, 240, 6]
     windows:
-      operation: minimum
+      operation: min
       ranges:
         - [120, 168]
         - [120, 240]

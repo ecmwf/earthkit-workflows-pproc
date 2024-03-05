@@ -17,9 +17,10 @@ from pproc.common.resources import ResourceMeter
 from pproc import clustereps
 from pproc.clustereps.utils import normalise_angles
 from pproc.clustereps.io import read_steps_grib
-from cascade.backends.base import BaseBackend
 from pproc.clustereps.__main__ import write_cluster_attr_grib
 from pproc.clustereps.cluster import get_output_keys
+from cascade.backends.base import BaseBackend
+from cascade.backends.decorators import batchable
 
 from ppcascade.utils.grib import (
     window_grib_headers,
@@ -91,15 +92,19 @@ class NumpyFieldListBackend(BaseBackend):
     def std(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
         return NumpyFieldListBackend.multi_arg_function("std", *arrays)
 
+    @batchable
     def min(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
         return NumpyFieldListBackend.multi_arg_function("min", *arrays)
 
+    @batchable
     def max(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
         return NumpyFieldListBackend.multi_arg_function("max", *arrays)
 
+    @batchable
     def sum(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
         return NumpyFieldListBackend.multi_arg_function("sum", *arrays)
 
+    @batchable
     def prod(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
         return NumpyFieldListBackend.multi_arg_function("prod", *arrays)
 
@@ -180,13 +185,6 @@ class NumpyFieldListBackend(BaseBackend):
         assert len(vals) == 2, f"Expected 2 fields for norm, received {len(vals)}"
         norm = xp.sqrt(vals[0] ** 2 + vals[1] ** 2)
         return FieldList.from_numpy(standardise_output(norm), arrays[0][0].metadata())
-
-    def window_operation(*arrays: list[NumpyFieldList], operation: str, window: Range):
-        grib_headers = window_grib_headers(operation, window)
-        ret = getattr(NumpyFieldListBackend, operation)(*arrays)
-        return FieldList.from_numpy(
-            ret.values, ret[0].metadata().override(grib_headers)
-        )
 
     def threshold(
         arr: NumpyFieldList,

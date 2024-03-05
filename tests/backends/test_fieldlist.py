@@ -65,16 +65,6 @@ def test_two_arg(func):
 
 @pytest.mark.parametrize(
     "func",
-    ["add", "subtract", "multiply", "divide", "norm", "diff"],
-)
-def test_window_operation(func):
-    arr = tuple([random_fieldlist(1, 5) for _ in range(2)])
-    kwargs = {"operation": func, "window": Range(name="156-180", steps=[156, 180])}
-    NumpyFieldListBackend.window_operation(*arr, **kwargs)
-
-
-@pytest.mark.parametrize(
-    "func",
     [
         NumpyFieldListBackend.divide,
         NumpyFieldListBackend.norm,

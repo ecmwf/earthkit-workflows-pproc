@@ -33,9 +33,6 @@ class ArrayAPIBackend(BaseArrayApiBackend):
         xp = array_api_compat.array_namespace(*arrays)
         return xp.sqrt(arrays[0] ** 2 + arrays[1] ** 2)
 
-    def window_operation(*arrays, operation: str, window: Range):
-        return getattr(ArrayAPIBackend, operation)(*arrays)
-
     def threshold(
         arr,
         comparison: str,

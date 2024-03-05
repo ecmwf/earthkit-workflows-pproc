@@ -115,7 +115,7 @@ parameters:
     windows:
       ranges:
       - [12, 36, 6]
-      operation: maximum      
+      operation: max
     grib_set:
       param: 228035
       typeOfStatisticalProcessing: 1

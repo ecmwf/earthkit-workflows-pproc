@@ -54,6 +54,8 @@ class SingleAction(BaseSingleAction):
         eps = float(eps)
         assert len(windows) == 1
         assert self.nodes.coords[dim] == windows[0].name
+        if not isinstance(sot, list):
+            sot = [sot]
 
         def _sot(action: Action, number: int) -> Action:
             new_sot = action.reduce(
@@ -66,7 +68,7 @@ class SingleAction(BaseSingleAction):
             return new_sot
 
         ret = self.join(climatology, "**datatype**", match_coord_values=True).transform(
-            _sot, sot, new_dim
+            _sot, list(map(int, sot)), new_dim
         )
         ret.non_descript_dim(new_dim)
         return ret
