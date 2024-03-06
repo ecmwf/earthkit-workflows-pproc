@@ -5,10 +5,9 @@ import os
 from meteokit import extreme
 from meteokit.stats import iter_quantiles
 from cascade.backends.arrayapi import ArrayApiBackend as BaseArrayApiBackend
-from cascade.backends.base import num_args
+from cascade.backends.decorators import num_args
 
 from ppcascade.utils.patch import PatchModule
-from ppcascade.utils.window import Range
 from ppcascade.utils.io import retrieve as ek_retrieve
 
 

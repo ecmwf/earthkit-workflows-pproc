@@ -45,7 +45,9 @@ def ensemble_anomaly(args: argparse.Namespace, deduplicate: bool = True):
                 param_config.windows.options.get("std_anomaly", False),
             )
             .window_operation(
-                param_config.windows.operation, param_config.windows.ranges
+                param_config.windows.operation,
+                param_config.windows.ranges,
+                batch_size=2,
             )
             .ensemble_operation(
                 param_config.ensemble["operation"], **param_config.ensemble["kwargs"]
@@ -93,7 +95,9 @@ def ensemble(args: argparse.Namespace, deduplicate: bool = True):
                 param_config.param["operation"], **param_config.param["kwargs"]
             )
             .window_operation(
-                param_config.windows.operation, param_config.windows.ranges
+                param_config.windows.operation,
+                param_config.windows.ranges,
+                batch_size=2,
             )
             .ensemble_operation(
                 param_config.ensemble["operation"], **param_config.ensemble["kwargs"]
@@ -140,7 +144,9 @@ def extreme(args: argparse.Namespace, deduplicate: bool = True):
                 param_config.param["operation"], **param_config.param["kwargs"]
             )
             .window_operation(
-                param_config.windows.operation, param_config.windows.ranges
+                param_config.windows.operation,
+                param_config.windows.ranges,
+                batch_size=2,
             )
             .ensemble_extreme(
                 param_config.ensemble["operation"],

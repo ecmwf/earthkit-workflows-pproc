@@ -2,7 +2,6 @@ import numpy as np
 import xarray as xr
 import itertools
 
-from earthkit.data import FieldList
 from cascade.fluent import Action, Node, Payload
 from cascade.fluent import SingleAction as BaseSingleAction
 from cascade.fluent import MultiAction as BaseMultiAction
@@ -117,12 +116,6 @@ class MultiAction(BaseMultiAction):
 
     def non_descript_dims(self):
         return self.nodes.attrs.pop("grib_exclude", [])
-
-    def diff(self, dim: str = "", **method_kwargs):
-        return self.reduce(
-            Payload(self.backend.diff, kwargs=method_kwargs),
-            dim,
-        )
 
     def extreme(
         self,
@@ -282,23 +275,28 @@ class MultiAction(BaseMultiAction):
         self,
         dim: str = "number",
         new_dim: str | xr.DataArray = xr.DataArray(["mean", "std"], name="type"),
+        batch_size: int = 0,
     ):
         """
         Creates nodes computing the mean and standard deviation along the specified dimension. A new dimension
-        is created joining the mean and standard deviation
+        is created joining the mean and standard deviation. If batch_size > 1 and less than the size
+        of the named dimension, the reduction will be computed first in
+        batches and then aggregated, otherwise no batching will be performed.
 
         Parameters
         ----------
         dim: str, dimension to compute mean and standard deviation along
         new_dim: str or xr.DataArray, name of new dimension or xr.DataArray specifying new dimension name and
         coordinate values
+        batch_size: int, size of batches to split reduction into. If 0,
+        computation is not batched
 
         Return
         ------
         MultiAction
         """
-        mean = self.mean(dim)
-        std = self.std(dim)
+        mean = self.mean(dim, batch_size)
+        std = self.std(dim, batch_size)
         res = mean.join(std, new_dim)
         res.non_descript_dim(new_dim if isinstance(new_dim, str) else new_dim.name)
         return res
@@ -310,6 +308,7 @@ class MultiAction(BaseMultiAction):
         local_scale_factor: float = None,
         edition: int = 1,  # TODO: set this properly
         dim: str = "number",
+        batch_size: int = 0,
     ):
         payload = Payload(
             self.backend.threshold,
@@ -321,11 +320,7 @@ class MultiAction(BaseMultiAction):
                 edition,
             ),
         )
-        return (
-            self.map(payload)
-            .map(Payload(lambda x: FieldList.from_numpy(x.values * 100, x.metadata())))
-            .mean(dim)
-        )
+        return self.map(payload).multiply(100).mean(dim, batch_size)
 
     def anomaly(
         self,
@@ -334,12 +329,10 @@ class MultiAction(BaseMultiAction):
         std_anomaly: bool = False,
         **method_kwargs,
     ):
-        anom = self.join(clim_mean, "**datatype**", match_coord_values=True).subtract(
-            **method_kwargs
-        )
+        anom = self.subtract(clim_mean, **method_kwargs)
         if not std_anomaly:
             return anom
-        return anom.join(clim_std, "**datatype**", match_coord_values=True).divide()
+        return anom.divide(clim_std, **method_kwargs)
 
     def quantiles(
         self, num_quantiles: int = 100, dim: str = "number", new_dim: str = "quantile"
@@ -366,6 +359,18 @@ class MultiAction(BaseMultiAction):
     def param_operation(
         self, operation: str | Payload | None, dim: str = "param", **kwargs
     ):
+        """
+        Reduction operation across different parameters
+
+        Params
+        ------
+        operation: str or Payload, operation to perform on ensemble members
+        dim: str, dimension to perform operation along
+
+        Return
+        ------
+        Single or MultiAction
+        """
         if operation is None:
             return self
         if isinstance(operation, str):
@@ -375,29 +380,91 @@ class MultiAction(BaseMultiAction):
         return self.reduce(operation, dim)
 
     def ensemble_operation(
-        self, operation: str | Payload | None, dim: str = "number", **kwargs
+        self,
+        operation: str | Payload | None,
+        dim: str = "number",
+        batch_size: int = 0,
+        **kwargs,
     ):
+        """
+        Reduction operation across ensemble members. If batch_size > 1 and less than the size
+        of the named dimension, the reduction will be computed first in
+        batches and then aggregated, otherwise no batching will be performed.
+
+        Params
+        ------
+        operation: str or Payload, operation to perform on ensemble members
+        dim: str, dimension to perform operation along
+        batch_size: int, size of batches to split reduction into. If 0,
+        computation is not batched
+
+        Return
+        ------
+        Single or MultiAction
+
+        Raises
+        ------
+        ValueError if payload function is not batchable and batch_size is not 0
+        """
         if operation is None:
             return self
         if isinstance(operation, str):
             if hasattr(self, operation):
                 return getattr(self, operation)(dim=dim, **kwargs)
             operation = Payload(getattr(self.backend, operation), kwargs=kwargs)
-        return self.reduce(operation, dim)
+        return self.reduce(operation, dim, batch_size)
 
-    def window_operation(self, operation: str, ranges: list[Range], dim: str = "step"):
+    def window_operation(
+        self,
+        operation: str | Payload,
+        ranges: list[Range],
+        dim: str = "step",
+        batch_size: int = 0,
+    ):
+        """
+        Reduction operation across steps. If batch_size > 1 and less than the size
+        of the named dimension, the reduction will be computed first in
+        batches and then aggregated, otherwise no batching will be performed.
+
+        Params
+        ------
+        operation: str or Payload, operation to perform on steps
+        ranges: list of Range, window ranges
+        dim: str, dimension to perform operation along
+        batch_size: int, size of batches to split reduction into. If 0,
+        computation is not batched
+
+        Return
+        ------
+        Single or MultiAction
+
+        Raises
+        ------
+        ValueError if payload function is not batchable and batch_size is not 0
+        """
         if operation is None:
             self._squeeze_dimension(dim)
             return self
 
-        def _window_operation(action: Action, range: Range) -> Action:
-            window_action = action.select({dim: range.steps}).reduce(
-                Payload(
-                    self.backend.window_operation,
-                    kwargs={"operation": operation, "window": range},
-                ),
-                dim,
-            )
+        def _window_operation(
+            action: Action, range: Range, operation=operation
+        ) -> Action:
+            window_action = action.select({dim: range.steps})
+            if isinstance(operation, str):
+                if hasattr(window_action, operation):
+                    window_action = getattr(window_action, operation)(
+                        dim=dim, batch_size=batch_size
+                    )
+                else:
+                    operation = Payload(getattr(self.backend, operation))
+                    window_action = window_action.reduce(
+                        operation, dim, batch_size=batch_size
+                    )
+            else:
+                window_action = window_action.reduce(
+                    operation, dim, batch_size=batch_size
+                )
+
             window_action._add_dimension(dim, range.name)
             return window_action
 
