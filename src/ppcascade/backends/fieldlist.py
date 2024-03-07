@@ -1,6 +1,6 @@
 import array_api_compat
 import numpy as np
-from meters import metered
+from meters import ResourceMeter
 from os.path import join as pjoin
 
 from meteokit import extreme
@@ -54,37 +54,38 @@ def comp_str2func(array_module, comparison: str):
 
 class NumpyFieldListBackend(BaseBackend):
     def multi_arg_function(func: str, *arrays: list[NumpyFieldList]) -> NumpyFieldList:
-        if len(arrays) == 1:
-            concat = arrays[0].values
-        else:
-            concat = NumpyFieldListBackend.concat(*arrays).values
-            # assert len(concat) == len(arrays)
+        with ResourceMeter(func.upper()):
+            if len(arrays) == 1:
+                concat = arrays[0].values
+            else:
+                concat = NumpyFieldListBackend.concat(*arrays).values
+                # assert len(concat) == len(arrays)
 
-        xp = array_api_compat.array_namespace(concat)
-        res = getattr(xp, func)(concat, axis=0)
-        return FieldList.from_numpy(standardise_output(res), arrays[0][0].metadata())
+            xp = array_api_compat.array_namespace(concat)
+            res = getattr(xp, func)(concat, axis=0)
+            return FieldList.from_numpy(
+                standardise_output(res), arrays[0][0].metadata()
+            )
 
     def two_arg_function(
         func: str, *arrays: NumpyFieldList, extract_keys: tuple = ()
     ) -> NumpyFieldList:
-        vals = [x.values for x in arrays]
-        xp = array_api_compat.array_namespace(*vals)
-        if len(vals) == 1:
-            # Assume fields are nested in single field list
-            vals = vals[0]
-            arr2_meta = arrays[0][1].metadata().buffer_to_metadata()
-        else:
-            arr2_meta = arrays[1][0].metadata().buffer_to_metadata()
-        assert (
-            len(vals) == 2
-        ), f"Expected 2 fields for two_arg_functions@{func}, received {len(vals)}"
-        metadata = (
-            arrays[0][0]
-            .metadata()
-            .override({key: arr2_meta.get(key) for key in extract_keys})
-        )
-        res = getattr(xp, func)(vals[0], vals[1])
-        return FieldList.from_numpy(standardise_output(res), metadata)
+        with ResourceMeter(func.upper()):
+            assert len(arrays) == 2, f"Expected 2 fields for two_arg_functions@{func}"
+            val1 = arrays[0].values  # First argument must be FieldList
+            if isinstance(arrays[1], FieldList):
+                val2 = arrays[1].values
+                arr2_meta = arrays[1][0].metadata().buffer_to_metadata()
+                override = {key: arr2_meta.get(key) for key in extract_keys}
+                xp = array_api_compat.array_namespace(val1, val2)
+            else:
+                val2 = arrays[1]
+                override = {}
+                xp = array_api_compat.array_namespace(val1)
+
+            metadata = arrays[0][0].metadata().override(override)
+            res = getattr(xp, func)(val1, val2)
+            return FieldList.from_numpy(standardise_output(res), metadata)
 
     def mean(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
         return NumpyFieldListBackend.multi_arg_function("mean", *arrays)
@@ -210,17 +211,21 @@ class NumpyFieldListBackend(BaseBackend):
         eps: float,
         control: bool = False,
     ) -> NumpyFieldList:
-        extreme_headers = extreme_grib_headers(clim, ens)
-        if control:
-            extreme_headers.update({"marsType": "efic", "totalNumber": 1, "number": 0})
-        else:
-            extreme_headers.update({"marsType": "efi", "efiOrder": 0, "number": 0})
-        metadata = ens[0].metadata().override(extreme_headers)
-
-        xp = array_api_compat.array_namespace(ens.values, clim.values)
-        with PatchModule(extreme, "numpy", xp):
-            res = extreme.efi(clim.values, ens.values, eps)
-        return FieldList.from_numpy(standardise_output(res), metadata)
+        with ResourceMeter(
+            f"EFI, clim {clim.values.shape}, ens {ens.values.shape}, control {control}"
+        ):
+            extreme_headers = extreme_grib_headers(clim, ens)
+            if control:
+                extreme_headers.update(
+                    {"marsType": "efic", "totalNumber": 1, "number": 0}
+                )
+            else:
+                extreme_headers.update({"marsType": "efi", "efiOrder": 0, "number": 0})
+            metadata = ens[0].metadata().override(extreme_headers)
+            xp = array_api_compat.array_namespace(ens.values, clim.values)
+            with PatchModule(extreme, "numpy", xp):
+                res = extreme.efi(clim.values, ens.values, eps)
+            return FieldList.from_numpy(standardise_output(res), metadata)
 
     def sot(
         clim: NumpyFieldList,
@@ -228,32 +233,33 @@ class NumpyFieldListBackend(BaseBackend):
         number: int,
         eps: float,
     ) -> NumpyFieldList:
-        extreme_headers = extreme_grib_headers(clim, ens)
-        if number == 90:
-            efi_order = 99
-        elif number == 10:
-            efi_order = 1
-        else:
-            raise Exception(
-                "SOT value '{sot}' not supported in template! Only accepting 10 and 90"
+        with ResourceMeter("SOT"):
+            extreme_headers = extreme_grib_headers(clim, ens)
+            if number == 90:
+                efi_order = 99
+            elif number == 10:
+                efi_order = 1
+            else:
+                raise Exception(
+                    "SOT value '{sot}' not supported in template! Only accepting 10 and 90"
+                )
+            metadata = (
+                ens[0]
+                .metadata()
+                .override(
+                    {
+                        **extreme_headers,
+                        "marsType": "sot",
+                        "efiOrder": efi_order,
+                        "number": number,
+                    }
+                )
             )
-        metadata = (
-            ens[0]
-            .metadata()
-            .override(
-                {
-                    **extreme_headers,
-                    "marsType": "sot",
-                    "efiOrder": efi_order,
-                    "number": number,
-                }
-            )
-        )
 
-        xp = array_api_compat.array_namespace(ens.values, clim.values)
-        with PatchModule(extreme, "numpy", xp):
-            res = extreme.sot(clim.values, ens.values, number, eps)
-        return FieldList.from_numpy(standardise_output(res), metadata)
+            xp = array_api_compat.array_namespace(ens.values, clim.values)
+            with PatchModule(extreme, "numpy", xp):
+                res = extreme.sot(clim.values, ens.values, number, eps)
+            return FieldList.from_numpy(standardise_output(res), metadata)
 
     def quantiles(ens: NumpyFieldList, quantile: float) -> NumpyFieldList:
         xp = array_api_compat.array_namespace(ens.values)
@@ -430,10 +436,8 @@ class NumpyFieldListBackend(BaseBackend):
 
         for missing_key in set_missing:
             template._handle.set_missing(missing_key)
-        meter, _ = metered(f"WRITE {loc}", None, True)(write_grib)(
-            target, template._handle, data[0].values
-        )
-        print(f"{str(meter)}")
+        with ResourceMeter(f"WRITE {loc}"):
+            write_grib(target, template._handle, data[0].values)
 
     def cluster_write(
         config,

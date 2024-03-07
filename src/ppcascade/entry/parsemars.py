@@ -82,7 +82,7 @@ def format_request(request):
     for k, v in ret.items():
         if k == MarsKey.TARGET:
             continue
-        if LIST_SEPARATOR in v or k in [MarsKey.PARAM, MarsKey.TYPE]:
+        if LIST_SEPARATOR in v or k in [MarsKey.PARAM, MarsKey.TYPE, MarsKey.STEP]:
             ret[k] = expand(v)
     return ret
 

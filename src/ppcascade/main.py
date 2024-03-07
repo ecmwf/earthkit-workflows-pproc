@@ -2,14 +2,22 @@ import sys
 import os
 import argparse
 import functools
-from meters import ResourceMeter
+import dill
 
+from meters import ResourceMeter
 from cascade.cascade import Cascade
 from cascade.executors.dask import DaskLocalExecutor
 from cascade.graph import Graph, deduplicate_nodes, pyvis
+from cascade.graph.export import serialise, deserialise
 
 from ppcascade.entry.genconfig import RequestTranslator
 from ppcascade.entry.parser import ArgsFile
+
+
+def graph_from_serialisation(args):
+    with open(args.graph_file, "rb") as f:
+        data = dill.load(f)
+    return deserialise(data)
 
 
 def node_info_ext(sinks, node):
@@ -78,6 +86,7 @@ def main(sys_args):
         default=False,
         help="Plot final graph. Default: False",
     )
+    parser.add_argument("--serialise", default="", type=str, help="Serialise graph")
 
     dask_group = parser.add_argument_group("dask", "Dask execution options")
     dask_group.add_argument(
@@ -132,6 +141,14 @@ def main(sys_args):
     )
     config_parser.set_defaults(func=graph_from_config)
 
+    graph_parser = subparsers.add_parser(
+        "from_serialised", help="Load graph from dill serialisation file"
+    )
+    graph_parser.add_argument(
+        "--graph_file", type=str, required=True, help="Filename of serialised graph"
+    )
+    graph_parser.set_defaults(func=graph_from_serialisation)
+
     args = parser.parse_args(sys_args)
     graph = args.func(args)
     if args.plot:
@@ -144,6 +161,10 @@ def main(sys_args):
             hierarchical_layout=False,
         )
         pyvis_graph.show(f"{args.output_root}/graph.html")
+    if len(args.serialise) != 0:
+        data = serialise(graph)
+        with open(args.serialise, "wb") as f:
+            dill.dump(data, f)
     if args.execute:
         DaskLocalExecutor.execute(
             graph,

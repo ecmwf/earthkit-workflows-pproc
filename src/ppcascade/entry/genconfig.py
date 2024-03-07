@@ -147,6 +147,12 @@ class ExtremeConfig(ProductConfig):
             deep_update(
                 updates, {"ensemble": {"sot": request.base_request.pop(MarsKey.NUMBER)}}
             )
+
+        if request.type == "efic":
+            common = copy.deepcopy(common)
+            for src in common["sources"].keys():
+                common["sources"][src]["ens"] = {**(common["sources"][src]["ens"][1])}
+
         for src in common["sources"].keys():
             deep_update(
                 param,

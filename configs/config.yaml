@@ -15,16 +15,10 @@ common:
       ens: {}
 params:  
   207:
-    param:
-      id: [165, 166]
-      operation: norm
     grib_set:
       indicatorOfParameter: 207
       gribTablesVersionNo: 128
   228249:
-    param: 
-      id: [228246, 228247]
-      operation: norm
     grib_set:
       indicatorOfParameter: 249
       gribTablesVersionNo: 228
