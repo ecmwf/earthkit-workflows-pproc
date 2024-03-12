@@ -1,9 +1,5 @@
 import pytest
 import os
-import functools
-from cascade.graph import pyvis
-
-from ppcascade.main import node_info_ext
 
 from cascade.cascade import Cascade
 
@@ -25,15 +21,6 @@ ROOT_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)))
 )
 def test_graph_construction(product, config, expected_num_nodes):
     graph = Cascade.graph(product, mock_args(config))
-    pyvis_graph = pyvis.to_pyvis(
-            graph,
-            notebook=True,
-            cdn_resources="remote",
-            height="1500px",
-            node_attrs=functools.partial(node_info_ext, graph.sinks),
-            hierarchical_layout=False,
-        )
-    pyvis_graph.show(f"{product}_graph.html")
     assert len([x for x in graph.nodes()]) == expected_num_nodes
 
 
