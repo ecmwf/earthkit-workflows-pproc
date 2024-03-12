@@ -31,13 +31,11 @@ class SingleAction(BaseSingleAction):
         self, climatology: Action, windows: list[Range], eps: float, dim: str = "step"
     ):
         eps = float(eps)
-        assert len(windows) == 1
+        assert len(windows) == 1, f"Only one window is supported, got {windows}"
         assert self.nodes.coords[dim] == windows[0].name
-        # Join with climatology and compute efi control
+        # Join with climatology and compute efi
         payload = Payload(
-            self.backend.efi,
-            (Node.input_name(1), Node.input_name(0), eps),
-            {"control": True},
+            self.backend.efi, (Node.input_name(1), Node.input_name(0), eps)
         )
         return self.join(climatology, "**datatype**").reduce(payload)
 
@@ -81,22 +79,19 @@ class SingleAction(BaseSingleAction):
         )
 
     def write(self, target, config_grib_sets: dict):
-        if target != "null:":
-            grib_sets = config_grib_sets.copy()
-            exclude = self.non_descript_dims()
-            grib_sets.update(self.nodes.attrs)
-            for name, values in self.nodes.coords.items():
-                if name in exclude:
-                    continue
-                if values.data.ndim == 0:
-                    grib_sets[name] = values.data
-                else:
-                    assert values.data.ndim == 1
-                    grib_sets[name] = values.data[0]
-            payload = Payload(
-                self.backend.write, (target, Node.input_name(0), grib_sets)
-            )
-            self.sinks.append(Node(payload, self.node()))
+        grib_sets = config_grib_sets.copy()
+        exclude = self.non_descript_dims()
+        grib_sets.update(self.nodes.attrs)
+        for name, values in self.nodes.coords.items():
+            if name in exclude:
+                continue
+            if values.data.ndim == 0:
+                grib_sets[name] = values.data
+            else:
+                assert values.data.ndim == 1
+                grib_sets[name] = values.data[0]
+        payload = Payload(self.backend.write, (target, Node.input_name(0), grib_sets))
+        self.sinks.append(Node(payload, self.node()))
         return self
 
 
@@ -123,7 +118,7 @@ class MultiAction(BaseMultiAction):
         windows: list[Range],
         sot: list[int],
         eps: float,
-        efi_control: bool = False,
+        efi_control: dict | None = None,
         ensemble_dim: str = "number",
         window_dim: str = "step",
         new_dim: str = "type",
@@ -137,7 +132,8 @@ class MultiAction(BaseMultiAction):
         windows: list of Range, list of window ranges
         sot: list of ints, Shift-Of-Tail values
         eps: float
-        efi_control: bool, whether to compute EFI for control member
+        efi_control: dict, selection for control member. If None, efi is not
+        computed for the control member
         dim: str, name of dimension for ensemble members
         new_dim: str, name of new dimension corresponding to EFI/SOT nodes.
 
@@ -149,8 +145,8 @@ class MultiAction(BaseMultiAction):
         concat = self.concatenate(ensemble_dim)
         efi = concat.efi(climatology, windows, eps, window_dim)
         efi._add_dimension(new_dim, "efi")
-        if efi_control:
-            control = self.select({ensemble_dim: 0}, drop=True).efi(
+        if efi_control is not None:
+            control = self.select(efi_control, drop=True).efi(
                 climatology, windows, eps, window_dim
             )
             control._add_dimension(new_dim, "efic")
@@ -450,6 +446,10 @@ class MultiAction(BaseMultiAction):
             action: Action, range: Range, operation=operation
         ) -> Action:
             window_action = action.select({dim: range.steps})
+            if len(range.steps) == 1:
+                # Nothing to reduce
+                return window_action
+
             if isinstance(operation, str):
                 if hasattr(window_action, operation):
                     window_action = getattr(window_action, operation)(
@@ -550,7 +550,7 @@ class PProcFluent(Fluent):
     def source(
         self,
         requests: list[Request | MultiSourceRequest],
-        join_key: str = "number",
+        join_key: str = "",
         **kwargs,
     ):
         all_actions = None
@@ -566,6 +566,9 @@ class PProcFluent(Fluent):
                 ),
                 kwargs,
             )
+
+            if len(join_key) != 0 and join_key not in new_action.nodes.coords:
+                new_action._add_dimension(join_key, request[join_key])
 
             if all_actions is None:
                 all_actions = new_action

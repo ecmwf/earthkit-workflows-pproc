@@ -35,11 +35,10 @@ from ppcascade.utils.io import retrieve as ek_retrieve
 
 def standardise_output(data):
     # Also, nest the data to avoid problems with not finding geography attribute
-    ret = data
-    if len(ret.shape) == 1:
-        ret = ret.reshape((1, *data.shape))
-    assert len(ret.shape) == 2
-    return ret
+    if len(data.shape) == 1:
+        data = data.reshape((1, *data.shape))
+    assert len(data.shape) == 2
+    return data
 
 
 def comp_str2func(array_module, comparison: str):
@@ -53,25 +52,39 @@ def comp_str2func(array_module, comparison: str):
 
 
 class NumpyFieldListBackend(BaseBackend):
+    def _merge(*fieldlists: list[NumpyFieldList]):
+        """
+        Merge fieldlist elements into a single array. fieldlists with
+        different number of fields must be concatenated, otherwise, the
+        elements in each fieldlist are stacked along a new dimension
+        """
+        if len(fieldlists) == 1:
+            return fieldlists[0].values
+
+        sizes = set(len(x) for x in fieldlists)
+        if len(sizes) != 1:
+            return NumpyFieldListBackend.concat(*fieldlists).values
+
+        values = [x.values for x in fieldlists]
+        xp = array_api_compat.array_namespace(*values)
+        return xp.asarray(values)
+
     def multi_arg_function(func: str, *arrays: list[NumpyFieldList]) -> NumpyFieldList:
         with ResourceMeter(func.upper()):
-            if len(arrays) == 1:
-                concat = arrays[0].values
-            else:
-                concat = NumpyFieldListBackend.concat(*arrays).values
-                # assert len(concat) == len(arrays)
-
-            xp = array_api_compat.array_namespace(concat)
-            res = getattr(xp, func)(concat, axis=0)
+            merged_array = NumpyFieldListBackend._merge(*arrays)
+            xp = array_api_compat.array_namespace(*merged_array)
+            res = standardise_output(getattr(xp, func)(merged_array, axis=0))
             return FieldList.from_numpy(
-                standardise_output(res), arrays[0][0].metadata()
+                res, [arrays[0][x].metadata() for x in range(len(res))]
             )
 
     def two_arg_function(
         func: str, *arrays: NumpyFieldList, extract_keys: tuple = ()
     ) -> NumpyFieldList:
         with ResourceMeter(func.upper()):
-            assert len(arrays) == 2, f"Expected 2 fields for two_arg_functions@{func}"
+            assert (
+                len(arrays) == 2
+            ), f"Expected 2 fields for two_arg_functions@{func}, got {len(arrays)}"
             val1 = arrays[0].values  # First argument must be FieldList
             if isinstance(arrays[1], FieldList):
                 val2 = arrays[1].values
@@ -83,8 +96,10 @@ class NumpyFieldListBackend(BaseBackend):
                 override = {}
                 xp = array_api_compat.array_namespace(val1)
 
-            metadata = arrays[0][0].metadata().override(override)
             res = getattr(xp, func)(val1, val2)
+            metadata = [
+                arrays[0][x].metadata().override(override) for x in range(len(res))
+            ]
             return FieldList.from_numpy(standardise_output(res), metadata)
 
     def mean(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
@@ -133,10 +148,8 @@ class NumpyFieldListBackend(BaseBackend):
         )
 
     def diff(*arrays: list[NumpyFieldList], extract_keys: tuple = ()) -> NumpyFieldList:
-        args = list(arrays)
-        args.reverse()
-        return NumpyFieldListBackend.two_arg_function(
-            "subtract", *args, extract_keys=extract_keys
+        return NumpyFieldListBackend.multiply(
+            NumpyFieldListBackend.subtract(*arrays, extract_keys=extract_keys), -1
         )
 
     def multiply(
@@ -151,6 +164,11 @@ class NumpyFieldListBackend(BaseBackend):
     ) -> NumpyFieldList:
         return NumpyFieldListBackend.two_arg_function(
             "divide", *arrays, extract_keys=extract_keys
+        )
+
+    def pow(*arrays: list[NumpyFieldList], extract_keys: tuple = ()) -> NumpyFieldList:
+        return NumpyFieldListBackend.two_arg_function(
+            "pow", *arrays, extract_keys=extract_keys
         )
 
     def concat(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
@@ -178,14 +196,12 @@ class NumpyFieldListBackend(BaseBackend):
         return array[indices]
 
     def norm(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
-        vals = [x.values for x in arrays]
-        xp = array_api_compat.array_namespace(*vals)
-        if len(vals) == 1:
-            # Assume fields to compute norm of are nested in single field list
-            vals = vals[0]
-        assert len(vals) == 2, f"Expected 2 fields for norm, received {len(vals)}"
-        norm = xp.sqrt(vals[0] ** 2 + vals[1] ** 2)
-        return FieldList.from_numpy(standardise_output(norm), arrays[0][0].metadata())
+        merged_array = NumpyFieldListBackend._merge(*arrays)
+        xp = array_api_compat.array_namespace(merged_array)
+        norm = standardise_output(xp.sqrt(xp.sum(xp.pow(merged_array, 2), axis=0)))
+        return FieldList.from_numpy(
+            norm, [arrays[0][x].metadata() for x in range(len(norm))]
+        )
 
     def threshold(
         arr: NumpyFieldList,
@@ -202,20 +218,20 @@ class NumpyFieldListBackend(BaseBackend):
         threshold_headers = threshold_grib_headers(
             comparison, value, local_scale_factor, edition
         )
-        metadata = arr[0].metadata().override(threshold_headers)
+        metadata = [
+            arr[x].metadata().override(threshold_headers) for x in range(len(res))
+        ]
         return FieldList.from_numpy(standardise_output(res), metadata)
 
     def efi(
         clim: NumpyFieldList,
         ens: NumpyFieldList,
         eps: float,
-        control: bool = False,
     ) -> NumpyFieldList:
-        with ResourceMeter(
-            f"EFI, clim {clim.values.shape}, ens {ens.values.shape}, control {control}"
-        ):
+        with ResourceMeter(f"EFI, clim {clim.values.shape}, ens {ens.values.shape}"):
             extreme_headers = extreme_grib_headers(clim, ens)
-            if control:
+            if False:
+                # TODO: whether this is efi control should be deduced from grib data
                 extreme_headers.update(
                     {"marsType": "efic", "totalNumber": 1, "number": 0}
                 )

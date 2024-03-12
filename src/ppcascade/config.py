@@ -108,9 +108,9 @@ class WindParamConfig(ParamConfig):
         _, reqs = _source_from_location(fc, self.sources)
         return reqs[0].get("interpolate", {}).get("vod2uv", "0") == "1"
 
-    def forecast_request(self, fc: str):
+    def forecast_request(self, fc: str, no_expand: tuple[str] = ()):
         vod2uv = self.vod2uv(fc)
-        no_expand = ("param") if vod2uv else ()
+        no_expand = (*no_expand, "param") if vod2uv else no_expand
         self.param["kwargs"].update({"vod2uv": vod2uv})
         return super().forecast_request(fc, no_expand), not vod2uv
 

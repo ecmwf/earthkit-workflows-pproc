@@ -102,13 +102,13 @@ class ProductConfig:
                 if isinstance(param_keys, dict):
                     sources[src][param_type] = {
                         **base_request,
-                        "param": param_id,
+                        "param": str(param_id),
                         **param_keys,
                         **src_keys,
                     }
                 else:
                     sources[src][param_type] = [
-                        {**base_request, "param": param_id, **x, **src_keys}
+                        {**base_request, "param": str(param_id), **x, **src_keys}
                         for x in sources[src][param_type]
                     ]
         return sources

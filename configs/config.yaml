@@ -1,6 +1,6 @@
 global:
   members:
-    end: 3
+    end: 50
     start: 1
 common:
   interpolate:
@@ -311,13 +311,9 @@ products:
           value: 15
       131073:
         steps: 
-          - [12, 240, 12]
-          - [123, 144, 3]
-          - [150, 240, 6]
-          - [228, 360, 12]
-          - [246, 360, 6]
+          - [12, 360, 12]
         param: 
-          id: 122
+          id: 167 # mn2t6 122
         ensemble:
           operation: threshold_prob
           comparison: "<="

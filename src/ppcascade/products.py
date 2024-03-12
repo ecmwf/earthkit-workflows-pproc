@@ -29,19 +29,24 @@ def ensemble_anomaly(args: argparse.Namespace, deduplicate: bool = True):
     config = Config(args)
     total_graph = Graph([])
     fluent = PProcFluent()
+    ensemble_dim = "type"
     for param_config in config.parameters:
         climatology = fluent.source(
-            param_config.clim_request(args.climatology), "step"
+            param_config.clim_request(args.climatology), join_key="step"
         )  # Will contain type em and es
 
         total_graph += (
-            fluent.source(param_config.forecast_request(args.forecast), stream=True)
+            fluent.source(
+                param_config.forecast_request(args.forecast, no_expand=("number",)),
+                stream=True,
+                join_key=ensemble_dim,
+            )
             .param_operation(
                 param_config.param["operation"], **param_config.param["kwargs"]
             )
             .anomaly(
-                climatology.select({"type": "em"}),
-                climatology.select({"type": "es"}),
+                climatology.select({"type": "em"}, drop=True),
+                climatology.select({"type": "es"}, drop=True),
                 param_config.windows.options.get("std_anomaly", False),
             )
             .window_operation(
@@ -50,7 +55,9 @@ def ensemble_anomaly(args: argparse.Namespace, deduplicate: bool = True):
                 batch_size=2,
             )
             .ensemble_operation(
-                param_config.ensemble["operation"], **param_config.ensemble["kwargs"]
+                param_config.ensemble["operation"],
+                dim=ensemble_dim,
+                **param_config.ensemble["kwargs"],
             )
             .write(
                 param_config.target,
@@ -83,14 +90,15 @@ def ensemble(args: argparse.Namespace, deduplicate: bool = True):
     """
     config = Config(args)
     total_graph = Graph([])
+    ensemble_dim = "type"
     for param_config in config.parameters:
-        requests = param_config.forecast_request(args.forecast)
+        requests = param_config.forecast_request(args.forecast, no_expand=("number",))
         stream = True
         if isinstance(requests, tuple):
             requests, stream = requests
         total_graph += (
             PProcFluent()
-            .source(requests, stream=stream)
+            .source(requests, stream=stream, join_key=ensemble_dim)
             .param_operation(
                 param_config.param["operation"], **param_config.param["kwargs"]
             )
@@ -100,7 +108,9 @@ def ensemble(args: argparse.Namespace, deduplicate: bool = True):
                 batch_size=2,
             )
             .ensemble_operation(
-                param_config.ensemble["operation"], **param_config.ensemble["kwargs"]
+                param_config.ensemble["operation"],
+                dim=ensemble_dim,
+                **param_config.ensemble["kwargs"],
             )
             .write(
                 param_config.target,
@@ -138,8 +148,20 @@ def extreme(args: argparse.Namespace, deduplicate: bool = True):
         climatology = fluent.source(
             param_config.clim_request(args.climatology, True, no_expand=("quantile"))
         )
+        ensemble_dim = "type"
+        if "efi_control" in param_config.ensemble["kwargs"]:
+            if param_config.ensemble["kwargs"]["efi_control"]:
+                # If ensemble dim is "number" then criteria for the control should be {ensemble_dim: 0}
+                param_config.ensemble["kwargs"]["efi_control"] = {ensemble_dim: "cf"}
+            else:
+                param_config.ensemble["kwargs"]["efi_control"] = None
+
         total_graph += (
-            fluent.source(param_config.forecast_request(args.forecast), stream=True)
+            fluent.source(
+                param_config.forecast_request(args.forecast, no_expand=("number",)),
+                stream=True,
+                join_key=ensemble_dim,
+            )
             .param_operation(
                 param_config.param["operation"], **param_config.param["kwargs"]
             )
@@ -152,6 +174,7 @@ def extreme(args: argparse.Namespace, deduplicate: bool = True):
                 param_config.ensemble["operation"],
                 climatology,
                 param_config.windows.ranges,
+                ensemble_dim=ensemble_dim,
                 **param_config.ensemble["kwargs"],
             )
             .write(
@@ -206,7 +229,9 @@ def clustereps(args: argparse.Namespace, deduplicate: bool = True) -> Graph:
         ).mean(dim="date")
 
     pca = (
-        fluent.source(config.forecast_request(args.ensemble, no_expand="step"))
+        fluent.source(
+            config.forecast_request(args.ensemble, no_expand="step"), join_key="number"
+        )
         .concatenate(dim="number")
         .join(spread, dim="data_type")
         .pca(config, args.mask, args.pca)

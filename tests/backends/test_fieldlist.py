@@ -36,13 +36,23 @@ def test_instantiation():
         NumpyFieldListBackend.min,
         NumpyFieldListBackend.prod,
         NumpyFieldListBackend.sum,
+        NumpyFieldListBackend.norm,
     ],
 )
 def test_multi_arg(func):
-    arr = [random_fieldlist(1, 5) for _ in range(5)]
+    arr = [random_fieldlist(2, 20), random_fieldlist(2, 20), random_fieldlist(1, 20)]
     unnested = func(*arr)
-    nested = func(NumpyFieldListBackend.concat(*arr))
+    assert unnested.values.shape == (1, 20)
+    concat = NumpyFieldListBackend.concat(*arr)
+    assert len(concat) == 5
+    assert concat.values.shape == (5, 20)
+    nested = func(concat)
+    assert nested.values.shape == (1, 20)
     assert np.all(unnested.values == nested.values)
+
+    # Field lists with multiple fields
+    arr2 = [random_fieldlist(3, 20) for _ in range(5)]
+    assert func(*arr2).values.shape == (3, 20)
 
 
 @pytest.mark.parametrize(
@@ -52,25 +62,20 @@ def test_multi_arg(func):
         NumpyFieldListBackend.subtract,
         NumpyFieldListBackend.multiply,
         NumpyFieldListBackend.divide,
-        NumpyFieldListBackend.norm,
         NumpyFieldListBackend.diff,
     ],
 )
 def test_two_arg(func):
+    # Single field in each field list
     arr = [random_fieldlist(1, 5) for _ in range(2)]
+    assert func(*arr).values.shape == (1, 5)
+
+    # Multiple fields in each field list
+    arr = [random_fieldlist(3, 5), 2]
     unnested = func(*arr)
-    nested = func(NumpyFieldListBackend.concat(*arr))
-    assert np.all(unnested.values == nested.values)
+    assert unnested.values.shape == (3, 5)
 
-
-@pytest.mark.parametrize(
-    "func",
-    [
-        NumpyFieldListBackend.divide,
-        NumpyFieldListBackend.norm,
-    ],
-)
-def test_two_arg(func):
+    # Raises on too many arguments
     arr = [random_fieldlist(1, 5) for _ in range(3)]
     with pytest.raises(AssertionError):
         func(*arr)
