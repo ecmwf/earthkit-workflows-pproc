@@ -54,18 +54,8 @@ class SingleAction(BaseSingleAction):
         if not isinstance(sot, list):
             sot = [sot]
 
-        def _sot(action: Action, number: int) -> Action:
-            new_sot = action.reduce(
-                Payload(
-                    self.backend.sot,
-                    (Node.input_name(1), Node.input_name(0), number, eps),
-                )
-            )
-            new_sot._add_dimension(new_dim, number)
-            return new_sot
-
         ret = self.join(climatology, "**datatype**", match_coord_values=True).transform(
-            _sot, list(map(int, sot)), new_dim
+            _sot_transform, [(int(num), eps, new_dim) for num in sot], new_dim
         )
         ret.non_descript_dim(new_dim)
         return ret
@@ -196,20 +186,13 @@ class MultiAction(BaseMultiAction):
         MultiAction
         """
         eps = float(eps)
-
-        def _efi(action: Action, window: Range) -> Action:
-            ret = action.select({dim: window.name}).reduce(
-                Payload(
-                    self.backend.efi,
-                    (Node.input_name(1), Node.input_name(0), eps),
-                ),
-                dim="**datatype**",
-            )
-            return ret
-
         return self.join(
             climatology, "**datatype**", match_coord_values=True
-        ).transform(_efi, windows, dim)
+        ).transform(
+            _efi_window_transform,
+            [({dim: window.name}, eps) for window in windows],
+            dim,
+        )
 
     def sot(
         self,
@@ -241,28 +224,9 @@ class MultiAction(BaseMultiAction):
         if not isinstance(sot, list):
             sot = [sot]
 
-        def _sot_windows(action: Action, window: Range) -> Action:
-            def _sot(action: Action, number: int) -> Action:
-                new_sot = action.reduce(
-                    Payload(
-                        self.backend.sot,
-                        (
-                            Node.input_name(1),
-                            Node.input_name(0),
-                            number,
-                            eps,
-                        ),
-                    )
-                )
-                new_sot._add_dimension(new_dim, number)
-                return new_sot
-
-            return action.select({dim: window.name}).transform(
-                _sot, list(map(int, sot)), new_dim
-            )
-
+        params = [({dim: window.name}, sot, eps, new_dim) for window in windows]
         ret = self.join(climatology, "**datatype**", match_coord_values=True).transform(
-            _sot_windows, windows, dim
+            _sot_window_transform, params, dim
         )
         ret.non_descript_dim(new_dim)
         return ret
@@ -333,15 +297,8 @@ class MultiAction(BaseMultiAction):
     def quantiles(
         self, num_quantiles: int = 100, dim: str = "number", new_dim: str = "quantile"
     ):
-        def _quantiles(action, quantile):
-            payload = Payload(self.backend.quantiles, (Node.input_name(0), quantile))
-            new_quantile = action.map(payload)
-            new_quantile._add_dimension(new_dim, quantile)
-            return new_quantile
-
-        ret = self.concatenate(dim).transform(
-            _quantiles, np.linspace(0.0, 1.0, int(num_quantiles) + 1), new_dim
-        )
+        params = [(x, new_dim) for x in np.linspace(0.0, 1.0, int(num_quantiles) + 1)]
+        ret = self.concatenate(dim).transform(_quantiles_transform, params, new_dim)
         ret.non_descript_dim(new_dim)
         return ret
 
@@ -442,33 +399,8 @@ class MultiAction(BaseMultiAction):
             self._squeeze_dimension(dim)
             return self
 
-        def _window_operation(
-            action: Action, range: Range, operation=operation
-        ) -> Action:
-            window_action = action.select({dim: range.steps})
-            if len(range.steps) == 1:
-                # Nothing to reduce
-                return window_action
-
-            if isinstance(operation, str):
-                if hasattr(window_action, operation):
-                    window_action = getattr(window_action, operation)(
-                        dim=dim, batch_size=batch_size
-                    )
-                else:
-                    operation = Payload(getattr(self.backend, operation))
-                    window_action = window_action.reduce(
-                        operation, dim, batch_size=batch_size
-                    )
-            else:
-                window_action = window_action.reduce(
-                    operation, dim, batch_size=batch_size
-                )
-
-            window_action._add_dimension(dim, range.name)
-            return window_action
-
-        return self.transform(_window_operation, ranges, dim)
+        params = [(dim, range, operation, batch_size) for range in ranges]
+        return self.transform(_window_transform, params, dim)
 
     def pca(self, config, mask, target: str = None):
         if mask is not None:
@@ -481,17 +413,10 @@ class MultiAction(BaseMultiAction):
         )
 
     def attribution(self, config, targets):
-        def _attribution(action, scenario):
-            payload = Payload(
-                self.backend.attribution,
-                (config, scenario, Node.input_name(0), Node.input_name(1)),
-            )
-            attr = action.reduce(payload)
-            attr._add_dimension("scenario", scenario)
-            return attr
-
         return self.transform(
-            _attribution, ["centroids", "representatives"], "scenario"
+            _attribution_transform,
+            [(config, "centroids"), (config, "representatives")],
+            "scenario",
         ).map(
             np.asarray(
                 [
@@ -533,6 +458,76 @@ class MultiAction(BaseMultiAction):
                 )
             )
         return self
+
+
+def _sot_transform(action: Action, number: int, eps: float, new_dim: str) -> Action:
+    new_sot = action.reduce(
+        Payload(
+            action.backend.sot,
+            (Node.input_name(1), Node.input_name(0), number, eps),
+        )
+    )
+    new_sot._add_dimension(new_dim, number)
+    return new_sot
+
+
+def _sot_window_transform(
+    action: Action, selection: dict, sot: list[int], eps: float, new_dim: str
+) -> Action:
+    return action.select(selection).transform(
+        _sot_transform, [(int(num), eps, new_dim) for num in sot], new_dim
+    )
+
+
+def _efi_window_transform(action: Action, selection: dict, eps: float) -> Action:
+    ret = action.select(selection).reduce(
+        Payload(
+            action.backend.efi,
+            (Node.input_name(1), Node.input_name(0), eps),
+        ),
+        dim="**datatype**",
+    )
+    return ret
+
+
+def _quantiles_transform(action, quantile: float, new_dim: str):
+    payload = Payload(action.backend.quantiles, (Node.input_name(0), quantile))
+    new_quantile = action.map(payload)
+    new_quantile._add_dimension(new_dim, quantile)
+    return new_quantile
+
+
+def _window_transform(
+    action: Action, dim: str, range: Range, operation: str, batch_size: int
+) -> Action:
+    window_action = action.select({dim: range.steps})
+    if len(range.steps) == 1:
+        # Nothing to reduce
+        return window_action
+
+    if isinstance(operation, str):
+        if hasattr(window_action, operation):
+            window_action = getattr(window_action, operation)(
+                dim=dim, batch_size=batch_size
+            )
+        else:
+            operation = Payload(getattr(action.backend, operation))
+            window_action = window_action.reduce(operation, dim, batch_size=batch_size)
+    else:
+        window_action = window_action.reduce(operation, dim, batch_size=batch_size)
+
+    window_action._add_dimension(dim, range.name)
+    return window_action
+
+
+def _attribution_transform(action, config, scenario):
+    payload = Payload(
+        action.backend.attribution,
+        (config, scenario, Node.input_name(0), Node.input_name(1)),
+    )
+    attr = action.reduce(payload)
+    attr._add_dimension("scenario", scenario)
+    return attr
 
 
 from .backends.fieldlist import NumpyFieldListBackend
