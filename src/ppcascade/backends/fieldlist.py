@@ -210,18 +210,19 @@ class NumpyFieldListBackend(BaseBackend):
         local_scale_factor=None,
         edition: int = 1,
     ) -> NumpyFieldList:
-        xp = array_api_compat.array_namespace(arr.values)
-        # Find all locations where np.nan appears as an ensemble value
-        is_nan = xp.isnan(arr.values)
-        thesh = comp_str2func(xp, comparison)(arr.values, value)
-        res = xp.where(is_nan, xp.nan, thesh)
-        threshold_headers = threshold_grib_headers(
-            comparison, value, local_scale_factor, edition
-        )
-        metadata = [
-            arr[x].metadata().override(threshold_headers) for x in range(len(res))
-        ]
-        return FieldList.from_numpy(standardise_output(res), metadata)
+        with ResourceMeter("THRESHOLD"):
+            xp = array_api_compat.array_namespace(arr.values)
+            # Find all locations where np.nan appears as an ensemble value
+            is_nan = xp.isnan(arr.values)
+            thesh = comp_str2func(xp, comparison)(arr.values, value)
+            res = xp.where(is_nan, xp.nan, thesh)
+            threshold_headers = threshold_grib_headers(
+                comparison, value, local_scale_factor, edition
+            )
+            metadata = [
+                arr[x].metadata().override(threshold_headers) for x in range(len(res))
+            ]
+            return FieldList.from_numpy(standardise_output(res), metadata)
 
     def efi(
         clim: NumpyFieldList,
@@ -278,13 +279,14 @@ class NumpyFieldListBackend(BaseBackend):
             return FieldList.from_numpy(standardise_output(res), metadata)
 
     def quantiles(ens: NumpyFieldList, quantile: float) -> NumpyFieldList:
-        xp = array_api_compat.array_namespace(ens.values)
-        with PatchModule(extreme, "numpy", xp):
-            res = list(iter_quantiles(ens.values, [quantile], method="numpy"))[0]
-        return FieldList.from_numpy(
-            standardise_output(res),
-            ens[0].metadata().override({"perturbationNumber": quantile}),
-        )
+        with ResourceMeter("QUANTILES"):    
+            xp = array_api_compat.array_namespace(ens.values)
+            with PatchModule(extreme, "numpy", xp):
+                res = list(iter_quantiles(ens.values, [quantile], method="numpy"))[0]
+            return FieldList.from_numpy(
+                standardise_output(res),
+                ens[0].metadata().override({"perturbationNumber": quantile}),
+            )
 
     def filter(
         arr1: NumpyFieldList,
@@ -294,10 +296,11 @@ class NumpyFieldListBackend(BaseBackend):
         *,
         replacement: float = 0,
     ) -> NumpyFieldList:
-        xp = array_api_compat.array_namespace(arr1.values, arr2.values)
-        condition = comp_str2func(xp, comparison)(arr2.values, threshold)
-        res = xp.where(condition, replacement, arr1.values)
-        return FieldList.from_numpy(standardise_output(res), arr1.metadata())
+        with ResourceMeter("FILTER"):    
+            xp = array_api_compat.array_namespace(arr1.values, arr2.values)
+            condition = comp_str2func(xp, comparison)(arr2.values, threshold)
+            res = xp.where(condition, replacement, arr1.values)
+            return FieldList.from_numpy(standardise_output(res), arr1.metadata())
 
     def pca(
         config,
