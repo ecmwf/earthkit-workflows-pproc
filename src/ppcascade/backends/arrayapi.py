@@ -4,8 +4,8 @@ import os
 
 from meteokit import extreme
 from meteokit.stats import iter_quantiles
-from cascade.backends.arrayapi import ArrayApiBackend as BaseArrayApiBackend
-from cascade.backends.decorators import num_args
+from cascade.backends.arrayapi import ArrayAPIBackend as BaseArrayAPIBackend
+from cascade.backends import num_args
 
 from ppcascade.utils.patch import PatchModule
 from ppcascade.utils.io import retrieve as ek_retrieve
@@ -21,16 +21,17 @@ def comp_str2func(array_module, comparison: str):
     return array_module.greater
 
 
-class ArrayAPIBackend(BaseArrayApiBackend):
+class ArrayAPIBackend(BaseArrayAPIBackend):
 
     @num_args(2)
     def diff(*arrays):
         return arrays[1] - arrays[0]
 
-    @num_args(2)
     def norm(*arrays):
         xp = array_api_compat.array_namespace(*arrays)
-        return xp.sqrt(arrays[0] ** 2 + arrays[1] ** 2)
+        if len(arrays) == 1:
+            arrays = arrays[0]
+        return xp.sqrt(xp.sum(xp.pow(xp.asarray(arrays), 2), axis=0))
 
     def threshold(
         arr,

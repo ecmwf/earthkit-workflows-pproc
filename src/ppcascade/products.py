@@ -41,6 +41,7 @@ def ensemble_anomaly(args: argparse.Namespace, deduplicate: bool = True):
                 stream=True,
                 join_key=ensemble_dim,
             )
+            .concatenate(dim=ensemble_dim, keep_dim=True)
             .param_operation(
                 param_config.param["operation"], **param_config.param["kwargs"]
             )
@@ -99,6 +100,7 @@ def ensemble(args: argparse.Namespace, deduplicate: bool = True):
         total_graph += (
             PProcFluent()
             .source(requests, stream=stream, join_key=ensemble_dim)
+            .concatenate(dim=ensemble_dim, keep_dim=True)
             .param_operation(
                 param_config.param["operation"], **param_config.param["kwargs"]
             )

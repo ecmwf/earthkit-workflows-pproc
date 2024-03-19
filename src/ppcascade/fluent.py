@@ -6,6 +6,7 @@ from cascade.fluent import Action, Node, Payload
 from cascade.fluent import SingleAction as BaseSingleAction
 from cascade.fluent import MultiAction as BaseMultiAction
 from cascade.fluent import Fluent
+from cascade import backends
 
 
 from .utils.window import Range
@@ -14,7 +15,7 @@ from .utils.request import Request, MultiSourceRequest
 
 class SingleAction(BaseSingleAction):
     def to_multi(self, nodes: xr.DataArray):
-        return MultiAction(self, nodes, self.backend)
+        return MultiAction(self, nodes)
 
     def non_descript_dim(self, dim: str):
         """
@@ -34,9 +35,7 @@ class SingleAction(BaseSingleAction):
         assert len(windows) == 1, f"Only one window is supported, got {windows}"
         assert self.nodes.coords[dim] == windows[0].name
         # Join with climatology and compute efi
-        payload = Payload(
-            self.backend.efi, (Node.input_name(1), Node.input_name(0), eps)
-        )
+        payload = Payload(backends.efi, (Node.input_name(1), Node.input_name(0), eps))
         return self.join(climatology, "**datatype**").reduce(payload)
 
     def sot(
@@ -63,7 +62,7 @@ class SingleAction(BaseSingleAction):
     def cluster(self, config, ncomp_file, indexes, deterministic):
         return self.map(
             Payload(
-                self.backend.cluster,
+                backends.cluster,
                 (config, Node.input_name(0), ncomp_file, indexes, deterministic),
             )
         )
@@ -80,7 +79,7 @@ class SingleAction(BaseSingleAction):
             else:
                 assert values.data.ndim == 1
                 grib_sets[name] = values.data[0]
-        payload = Payload(self.backend.write, (target, Node.input_name(0), grib_sets))
+        payload = Payload(backends.write, (target, Node.input_name(0), grib_sets))
         self.sinks.append(Node(payload, self.node()))
         return self
 
@@ -88,8 +87,8 @@ class SingleAction(BaseSingleAction):
 class MultiAction(BaseMultiAction):
     def to_single(self, payload_or_node: Payload | Node):
         if isinstance(payload_or_node, Payload):
-            return SingleAction.from_payload(self, payload_or_node, self.backend)
-        return SingleAction(self, payload_or_node, self.backend)
+            return SingleAction.from_payload(self, payload_or_node)
+        return SingleAction(self, payload_or_node)
 
     def non_descript_dim(self, dim: str):
         """
@@ -271,7 +270,7 @@ class MultiAction(BaseMultiAction):
         batch_size: int = 0,
     ):
         payload = Payload(
-            self.backend.threshold,
+            backends.threshold,
             (
                 Node.input_name(0),
                 comparison,
@@ -304,9 +303,9 @@ class MultiAction(BaseMultiAction):
 
     def wind_speed(self, vod2uv: bool, dim: str = "param"):
         if vod2uv:
-            ret = self.map(Payload(self.backend.norm, (Node.input_name(0),)))
+            ret = self.map(Payload(backends.norm, (Node.input_name(0),)))
         else:
-            ret = self.reduce(Payload(self.backend.norm), dim)
+            ret = self.reduce(Payload(backends.norm), dim)
         return ret
 
     def param_operation(
@@ -329,7 +328,7 @@ class MultiAction(BaseMultiAction):
         if isinstance(operation, str):
             if hasattr(self, operation):
                 return getattr(self, operation)(dim=dim, **kwargs)
-            operation = Payload(getattr(self.backend, operation), kwargs=kwargs)
+            operation = Payload(getattr(backends, operation), kwargs=kwargs)
         return self.reduce(operation, dim)
 
     def ensemble_operation(
@@ -364,7 +363,7 @@ class MultiAction(BaseMultiAction):
         if isinstance(operation, str):
             if hasattr(self, operation):
                 return getattr(self, operation)(dim=dim, **kwargs)
-            operation = Payload(getattr(self.backend, operation), kwargs=kwargs)
+            operation = Payload(getattr(backends, operation), kwargs=kwargs)
         return self.reduce(operation, dim, batch_size)
 
     def window_operation(
@@ -407,7 +406,7 @@ class MultiAction(BaseMultiAction):
             raise NotImplementedError()
         return self.reduce(
             Payload(
-                self.backend.pca,
+                backends.pca,
                 (config, Node.input_name(0), Node.input_name(1), mask, target),
             )
         )
@@ -421,11 +420,11 @@ class MultiAction(BaseMultiAction):
             np.asarray(
                 [
                     Payload(
-                        self.backend.cluster_write,
+                        backends.cluster_write,
                         (config, "centroids", Node.input_name(0), targets["centroids"]),
                     ),
                     Payload(
-                        self.backend.cluster_write,
+                        backends.cluster_write,
                         (
                             config,
                             "representatives",
@@ -451,9 +450,7 @@ class MultiAction(BaseMultiAction):
             grib_sets.update({k: v for k, v in node_coords.items() if k not in exclude})
             self.sinks.append(
                 Node(
-                    Payload(
-                        self.backend.write, (target, Node.input_name(0), grib_sets)
-                    ),
+                    Payload(backends.write, (target, Node.input_name(0), grib_sets)),
                     node,
                 )
             )
@@ -463,7 +460,7 @@ class MultiAction(BaseMultiAction):
 def _sot_transform(action: Action, number: int, eps: float, new_dim: str) -> Action:
     new_sot = action.reduce(
         Payload(
-            action.backend.sot,
+            backends.sot,
             (Node.input_name(1), Node.input_name(0), number, eps),
         )
     )
@@ -482,7 +479,7 @@ def _sot_window_transform(
 def _efi_window_transform(action: Action, selection: dict, eps: float) -> Action:
     ret = action.select(selection).reduce(
         Payload(
-            action.backend.efi,
+            backends.efi,
             (Node.input_name(1), Node.input_name(0), eps),
         ),
         dim="**datatype**",
@@ -491,7 +488,7 @@ def _efi_window_transform(action: Action, selection: dict, eps: float) -> Action
 
 
 def _quantiles_transform(action, quantile: float, new_dim: str):
-    payload = Payload(action.backend.quantiles, (Node.input_name(0), quantile))
+    payload = Payload(backends.quantiles, (Node.input_name(0), quantile))
     new_quantile = action.map(payload)
     new_quantile._add_dimension(new_dim, quantile)
     return new_quantile
@@ -511,7 +508,7 @@ def _window_transform(
                 dim=dim, batch_size=batch_size
             )
         else:
-            operation = Payload(getattr(action.backend, operation))
+            operation = Payload(getattr(backends, operation))
             window_action = window_action.reduce(operation, dim, batch_size=batch_size)
     else:
         window_action = window_action.reduce(operation, dim, batch_size=batch_size)
@@ -522,7 +519,7 @@ def _window_transform(
 
 def _attribution_transform(action, config, scenario):
     payload = Payload(
-        action.backend.attribution,
+        backends.attribution,
         (config, scenario, Node.input_name(0), Node.input_name(1)),
     )
     attr = action.reduce(payload)
@@ -538,14 +535,14 @@ class PProcFluent(Fluent):
         self,
         single_action=SingleAction,
         multi_action=MultiAction,
-        backend=NumpyFieldListBackend,
     ):
-        super().__init__(single_action, multi_action, backend)
+        super().__init__(single_action, multi_action)
 
     def source(
         self,
         requests: list[Request | MultiSourceRequest],
         join_key: str = "",
+        backend=NumpyFieldListBackend,
         **kwargs,
     ):
         all_actions = None
@@ -554,7 +551,7 @@ class PProcFluent(Fluent):
             for indices, new_request in request.expand():
                 payloads[indices] = (new_request,)
             new_action = super().source(
-                self.backend.retrieve,
+                backend.retrieve,
                 xr.DataArray(
                     payloads,
                     coords={key: list(request[key]) for key in request.dims.keys()},

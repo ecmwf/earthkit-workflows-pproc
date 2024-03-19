@@ -12,9 +12,9 @@ ROOT_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)))
     "product, config, expected_num_nodes",
     [
         ["ensemble", f"{ROOT_DIR}/templates/prob.yaml", 112],
-        ["ensemble_anomaly", f"{ROOT_DIR}/templates/t850.yaml", 120],
+        ["ensemble_anomaly", f"{ROOT_DIR}/templates/t850.yaml", 84],
         ["ensemble", f"{ROOT_DIR}/templates/wind.yaml", 72],
-        ["ensemble", f"{ROOT_DIR}/templates/ensms.yaml", 100],
+        ["ensemble", f"{ROOT_DIR}/templates/ensms.yaml", 114],
         ["extreme", f"{ROOT_DIR}/templates/extreme.yaml", 74],
         ["ensemble", f"{ROOT_DIR}/templates/quantiles.yaml", 60],
     ],

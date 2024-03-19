@@ -91,18 +91,32 @@ def main(sys_args):
         default=False,
         help="Plot final graph. Default: False",
     )
-    parser.add_argument("--serialise", default="", type=str, help="Filename to write serialised graph to. Graph is serialised using dill. If not provided, graph will not be serialised.")
+    parser.add_argument(
+        "--serialise",
+        default="",
+        type=str,
+        help="Filename to write serialised graph to. Graph is serialised using dill. If not provided, graph will not be serialised.",
+    )
 
     dask_group = parser.add_argument_group("dask", "Dask execution options")
     dask_group.add_argument(
-        "--schedule", default=False, action="store_true", help="Schedule graph using DepthFirstScheduler"
+        "--schedule",
+        default=False,
+        action="store_true",
+        help="Schedule graph using DepthFirstScheduler",
     )
     dask_group.add_argument(
-        "--execute", default=None, type=str, choices=["local", "client"], 
-        help="Execute graph using either local or client Dask executor. If not provided, graph will not be executed. Default: None"
+        "--execute",
+        default=None,
+        type=str,
+        choices=["local", "client"],
+        help="Execute graph using either local or client Dask executor. If not provided, graph will not be executed. Default: None",
     )
     dask_group.add_argument(
-        "--params", default="workers=2,threads_per_worker=1,memory=10", type=str, help="Comma separated list of parameters for Dask executor. Memory in GB. Default: workers=2,threads_per_worker=1,memory=10"
+        "--params",
+        default="workers=2,threads_per_worker=1,memory=10",
+        type=str,
+        help="Comma separated list of parameters for Dask executor. Memory in GB. Default: workers=2,threads_per_worker=1,memory=10",
     )
 
     subparsers = parser.add_subparsers(required=True)
@@ -178,11 +192,19 @@ def main(sys_args):
             with ResourceMeter("SCHEDULE"):
                 context_graph = ContextGraph()
                 for index in range(executor_params["workers"]):
-                    context_graph.add_node(f"worker-{index}", type="CPU", speed=10, memory=executor_params["memory"])
+                    context_graph.add_node(
+                        f"worker-{index}",
+                        type="CPU",
+                        speed=10,
+                        memory=executor_params["memory"],
+                    )
                 for index in range(executor_params["workers"] - 1):
-                    context_graph.add_edge(f"worker-{index}", f"worker-{index+1}", bandwidth=0.1, latency=1)
-                graph = DepthFirstScheduler().schedule(to_task_graph(graph, {}), context_graph)
-
+                    context_graph.add_edge(
+                        f"worker-{index}", f"worker-{index+1}", bandwidth=0.1, latency=1
+                    )
+                graph = DepthFirstScheduler().schedule(
+                    to_task_graph(graph, {}), context_graph
+                )
 
         os.environ["DASK_LOGGING__DISTRIBUTED"] = "debug"
         with ResourceMeter("EXECUTE"):
@@ -202,6 +224,7 @@ def main(sys_args):
                     bool(executor_params.get("adaptive", False)),
                     report=f"{args.output_root}/dask_report.html",
                 )
-        
+
+
 if __name__ == "__main__":
     main(sys.argv[1:])

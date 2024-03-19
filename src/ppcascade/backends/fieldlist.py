@@ -19,8 +19,7 @@ from pproc.clustereps.utils import normalise_angles
 from pproc.clustereps.io import read_steps_grib
 from pproc.clustereps.__main__ import write_cluster_attr_grib
 from pproc.clustereps.cluster import get_output_keys
-from cascade.backends.base import BaseBackend
-from cascade.backends.decorators import batchable
+from cascade.backends import num_args
 
 from ppcascade.utils.grib import (
     window_grib_headers,
@@ -51,7 +50,7 @@ def comp_str2func(array_module, comparison: str):
     return array_module.greater
 
 
-class NumpyFieldListBackend(BaseBackend):
+class NumpyFieldListBackend:
     def _merge(*fieldlists: list[NumpyFieldList]):
         """
         Merge fieldlist elements into a single array. fieldlists with
@@ -60,10 +59,6 @@ class NumpyFieldListBackend(BaseBackend):
         """
         if len(fieldlists) == 1:
             return fieldlists[0].values
-
-        sizes = set(len(x) for x in fieldlists)
-        if len(sizes) != 1:
-            return NumpyFieldListBackend.concat(*fieldlists).values
 
         values = [x.values for x in fieldlists]
         xp = array_api_compat.array_namespace(*values)
@@ -82,10 +77,9 @@ class NumpyFieldListBackend(BaseBackend):
         func: str, *arrays: NumpyFieldList, extract_keys: tuple = ()
     ) -> NumpyFieldList:
         with ResourceMeter(func.upper()):
-            assert (
-                len(arrays) == 2
-            ), f"Expected 2 fields for two_arg_functions@{func}, got {len(arrays)}"
-            val1 = arrays[0].values  # First argument must be FieldList
+            # First argument must be FieldList
+            assert isinstance(arrays[0], FieldList)
+            val1 = arrays[0].values
             if isinstance(arrays[1], FieldList):
                 val2 = arrays[1].values
                 arr2_meta = arrays[1][0].metadata().buffer_to_metadata()
@@ -108,19 +102,15 @@ class NumpyFieldListBackend(BaseBackend):
     def std(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
         return NumpyFieldListBackend.multi_arg_function("std", *arrays)
 
-    @batchable
     def min(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
         return NumpyFieldListBackend.multi_arg_function("min", *arrays)
 
-    @batchable
     def max(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
         return NumpyFieldListBackend.multi_arg_function("max", *arrays)
 
-    @batchable
     def sum(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
         return NumpyFieldListBackend.multi_arg_function("sum", *arrays)
 
-    @batchable
     def prod(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
         return NumpyFieldListBackend.multi_arg_function("prod", *arrays)
 
@@ -147,6 +137,7 @@ class NumpyFieldListBackend(BaseBackend):
             "subtract", *arrays, extract_keys=extract_keys
         )
 
+    @num_args(2)
     def diff(*arrays: list[NumpyFieldList], extract_keys: tuple = ()) -> NumpyFieldList:
         return NumpyFieldListBackend.multiply(
             NumpyFieldListBackend.subtract(*arrays, extract_keys=extract_keys), -1
@@ -279,7 +270,7 @@ class NumpyFieldListBackend(BaseBackend):
             return FieldList.from_numpy(standardise_output(res), metadata)
 
     def quantiles(ens: NumpyFieldList, quantile: float) -> NumpyFieldList:
-        with ResourceMeter("QUANTILES"):    
+        with ResourceMeter("QUANTILES"):
             xp = array_api_compat.array_namespace(ens.values)
             with PatchModule(extreme, "numpy", xp):
                 res = list(iter_quantiles(ens.values, [quantile], method="numpy"))[0]
@@ -296,7 +287,7 @@ class NumpyFieldListBackend(BaseBackend):
         *,
         replacement: float = 0,
     ) -> NumpyFieldList:
-        with ResourceMeter("FILTER"):    
+        with ResourceMeter("FILTER"):
             xp = array_api_compat.array_namespace(arr1.values, arr2.values)
             condition = comp_str2func(xp, comparison)(arr2.values, threshold)
             res = xp.where(condition, replacement, arr1.values)
