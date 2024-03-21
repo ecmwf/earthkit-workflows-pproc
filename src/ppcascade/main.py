@@ -67,6 +67,102 @@ def graph_from_config(args):
     return Cascade.graph(args.product, product_args)
 
 
+def parse_options(options: str) -> dict:
+    options = {}
+    for pair in options.split(","):
+        key, value = pair.split("=")
+        try:
+            value = int(value)
+        except ValueError:
+            pass
+        options[key] = value
+    return options
+
+
+def benchmark(graph: Graph, output_root: str, b_options: str) -> dict:
+    if not b_options:
+        return {}
+    options = parse_options(b_options)
+    with ResourceMeter("BENCHMARK"):
+        if b_options["type"] == "local":
+            resource_map = DaskLocalExecutor().benchmark(
+                graph,
+                n_workers=options["workers"],
+                memory_limit=f"{options['memory']}MB",
+                adaptive=False,
+                report=f"{output_root}/dask_report.html",
+                mem_report=f"{output_root}/mem_usage.csv",
+            )
+        elif b_options["type"] == "client":
+            resource_map = DaskClientExecutor().benchmark(
+                graph,
+                scheduler_file=options["scheduler_file"],
+                adaptive=False,
+                report=f"{output_root}/dask_report.html",
+                mem_report=options["mem_report"],
+            )
+        else:
+            raise ValueError(
+                f"Unknown benchmark type {b_options['type']}. Expected one of local, client"
+            )
+    dill.dump(resource_map, open(f"{output_root}/resource_map.dill", "wb"))
+    return resource_map
+
+
+def schedule(graph: Graph, s_options: str, resource_map: dict) -> Graph:
+    if not s_options:
+        return graph
+    options = parse_options(s_options)
+    if not resource_map and options.get("resource_map", ""):
+        resource_map = dill.load(open(options["resource_map"], "rb"))
+
+    with ResourceMeter("SCHEDULE"):
+        context_graph = ContextGraph()
+        for index in range(options["workers"]):
+            context_graph.add_node(
+                f"worker-{index}",
+                type="CPU",
+                speed=1,
+                memory=options["memory"],
+            )
+        for index in range(options["workers"] - 1):
+            context_graph.add_edge(
+                f"worker-{index}", f"worker-{index+1}", bandwidth=0.1, latency=1
+            )
+        graph = DepthFirstScheduler().schedule(
+            to_task_graph(graph, resource_map), context_graph
+        )
+    return graph
+
+
+def execute(graph: Graph, output_root: str, e_options: str):
+    if not e_options:
+        return
+    options = parse_options(e_options)
+    os.environ["DASK_LOGGING__DISTRIBUTED"] = "debug"
+    with ResourceMeter("EXECUTE"):
+        if options["type"] == "local":
+            DaskLocalExecutor().execute(
+                graph,
+                n_workers=options["workers"],
+                threads_per_worker=options["threads_per_worker"],
+                memory_limit=f"{options['memory']}MB",
+                adaptive=bool(options.get("adaptive", False)),
+                report=f"{output_root}/dask_report.html",
+            )
+        elif options["type"] == "client":
+            DaskClientExecutor().execute(
+                graph,
+                options["scheduler_file"],
+                bool(options.get("adaptive", False)),
+                report=f"{output_root}/dask_report.html",
+            )
+        else:
+            raise ValueError(
+                f"Unknown executor type {options['type']}. Expected one of local, client"
+            )
+
+
 def main(sys_args):
     sys.stdout.reconfigure(line_buffering=True)
 
@@ -74,49 +170,50 @@ def main(sys_args):
         description="Create and execute task graph for PPROC products"
     )
     parser.add_argument(
-        "--options",
-        type=str,
-        required=True,
-        help="Path to default run options e.g. source specification",
-    )
-    parser.add_argument(
+        "-o",
         "--output-root",
+        type=str,
         default=os.getcwd(),
         help="Output directory for generated graph plot and execution report. Default: CWD",
     )
     parser.add_argument(
         "-p",
         "--plot",
-        action="store_true",
-        default=False,
-        help="Plot final graph. Default: False",
+        type=str,
+        default="",
+        help="Final name to plot graph to. If not provided, graph will not be plotting.",
     )
     parser.add_argument(
+        "-s",
         "--serialise",
-        default="",
         type=str,
-        help="Filename to write serialised graph to. Graph is serialised using dill. If not provided, graph will not be serialised.",
+        default="",
+        help="Filename to write serialised graph to. Graph is serialised using dill."
+        + "If not provided, graph will not be serialised.",
     )
 
     dask_group = parser.add_argument_group("dask", "Dask execution options")
     dask_group.add_argument(
-        "--schedule",
-        default=False,
-        action="store_true",
-        help="Schedule graph using DepthFirstScheduler",
+        "--benchmark-options",
+        type=str,
+        default="",
+        help="Benchmarking options. If not provided, graph will not be benchmarked."
+        + "Example: type=client,scheduler_file=/path/to/scheduler_file,mem_report=/path/to/mem_report.csv",
     )
     dask_group.add_argument(
-        "--execute",
-        default=None,
+        "--schedule-options",
         type=str,
-        choices=["local", "client"],
-        help="Execute graph using either local or client Dask executor. If not provided, graph will not be executed. Default: None",
+        default="",
+        help="Options for schedule graph using DepthFirstScheduler, memory in MB."
+        + "If not provided, graph will not be scheduled. Example: workers=2,memory=10",
     )
     dask_group.add_argument(
-        "--params",
-        default="workers=2,threads_per_worker=1,memory=10",
+        "--execute-options",
         type=str,
-        help="Comma separated list of parameters for Dask executor. Memory in GB. Default: workers=2,threads_per_worker=1,memory=10",
+        default="",
+        help="Execute graph using either local or client Dask executor, memory in MB."
+        + "If not provided, graph will not be executed."
+        + "Example: type=client,scheduler_file=/path/to/scheduler_file,adaptive=False",
     )
 
     subparsers = parser.add_subparsers(required=True)
@@ -131,6 +228,12 @@ def main(sys_args):
         type=str,
         required=True,
         help="Path to default config for parameters",
+    )
+    request_parser.add_argument(
+        "--options",
+        type=str,
+        required=True,
+        help="Path to default run options e.g. source specification",
     )
     request_parser.set_defaults(func=graph_from_request)
 
@@ -150,19 +253,25 @@ def main(sys_args):
         choices=["ensemble", "ensemble_anomaly", "extreme", "clustereps"],
         help="Graph product associated to configuration file",
     )
+    config_parser.add_argument(
+        "--options",
+        type=str,
+        required=True,
+        help="Path to default run options e.g. source specification",
+    )
     config_parser.set_defaults(func=graph_from_config)
 
     graph_parser = subparsers.add_parser(
         "from_serialised", help="Load graph from dill serialisation file"
     )
     graph_parser.add_argument(
-        "--graph-file", type=str, required=True, help="Filename of serialised graph"
+        "--file", type=str, required=True, help="Filename of serialised graph"
     )
     graph_parser.set_defaults(func=graph_from_serialisation)
 
     args = parser.parse_args(sys_args)
     graph = args.func(args)
-    if args.plot:
+    if len(args.plot) != 0:
         pyvis_graph = pyvis.to_pyvis(
             graph,
             notebook=True,
@@ -171,59 +280,16 @@ def main(sys_args):
             node_attrs=functools.partial(node_info_ext, graph.sinks),
             hierarchical_layout=False,
         )
-        pyvis_graph.show(f"{args.output_root}/graph.html")
+        pyvis_graph.show(args.plot)
 
     if len(args.serialise) != 0:
         data = serialise(graph)
         with open(args.serialise, "wb") as f:
             dill.dump(data, f)
 
-    if args.execute:
-        executor_params = {}
-        for pair in args.params.split(","):
-            key, value = pair.split("=")
-            try:
-                value = int(value)
-            except ValueError:
-                pass
-            executor_params[key] = value
-
-        if args.schedule:
-            with ResourceMeter("SCHEDULE"):
-                context_graph = ContextGraph()
-                for index in range(executor_params["workers"]):
-                    context_graph.add_node(
-                        f"worker-{index}",
-                        type="CPU",
-                        speed=10,
-                        memory=executor_params["memory"],
-                    )
-                for index in range(executor_params["workers"] - 1):
-                    context_graph.add_edge(
-                        f"worker-{index}", f"worker-{index+1}", bandwidth=0.1, latency=1
-                    )
-                graph = DepthFirstScheduler().schedule(
-                    to_task_graph(graph, {}), context_graph
-                )
-
-        os.environ["DASK_LOGGING__DISTRIBUTED"] = "debug"
-        with ResourceMeter("EXECUTE"):
-            if args.execute == "local":
-                DaskLocalExecutor().execute(
-                    graph,
-                    n_workers=executor_params["workers"],
-                    threads_per_worker=executor_params["threads_per_worker"],
-                    memory_limit=f"{executor_params['memory']}GB",
-                    adaptive=bool(executor_params.get("adaptive", False)),
-                    report=f"{args.output_root}/dask_report.html",
-                )
-            else:
-                DaskClientExecutor().execute(
-                    graph,
-                    executor_params["scheduler_file"],
-                    bool(executor_params.get("adaptive", False)),
-                    report=f"{args.output_root}/dask_report.html",
-                )
+    resource_map = benchmark(graph, args.output_root, args.benchmark_options)
+    graph = schedule(graph, args.schedule_options, resource_map)
+    execute(graph, args.output_root, args.execute_options)
 
 
 if __name__ == "__main__":
