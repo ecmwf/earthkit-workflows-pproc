@@ -281,3 +281,33 @@ parameters:
             144: 156
             156: 168
             168: 180
+  - target: "fdb:"
+    steps:
+      - [120, 168, 12]
+    windows:
+      ranges:
+        - [120, 120]
+    grib_set:
+      paramId: 131022
+    ensemble:
+      operation: threshold_prob
+      comparison: "<"
+      value: -8
+    sources:
+      fdb:
+        fc:
+          <<: *base_keys
+          stream: 'enfo'
+          type: pf 
+          date: 20230914
+          time: 12
+          interpolate: *base_interp
+        clim:
+          <<: *base_keys
+          stream: 'efhs'
+          type: [em, es]
+          date: 20230914
+          time: 00
+          interpolate: *base_interp
+          step:
+            120: 132

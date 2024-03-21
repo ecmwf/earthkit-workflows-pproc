@@ -126,3 +126,41 @@ parameters:
       gribTablesVersionNo: 132
       localDefinitionNumber: 19
       mars.expver: '9078'
+  - target: "fileset:cascade_extreme_{param}.grib"
+    sources:
+      fdb:
+        fc:
+          <<: *base_keys_tp
+          date: 20230914
+          time: 12
+          stream: enfo
+          type: cf
+          interpolate: *base_interp_tp
+        clim:
+          <<: *base_keys_tp
+          date: '20230911'
+          time: '00'
+          stream: efhs
+          type: cd
+          quantile: 100
+          interpolate: *base_interp_tp
+          step:
+            12-36: 0-24
+    ensemble:
+      operation: extreme
+      eps: 1e-4
+      sot: [90]
+      efi_control: True
+    windows:
+      ranges:
+      - [12, 12]
+    grib_set:
+      param: 228035
+      typeOfStatisticalProcessing: 1
+      edition: 1
+      indicatorOfTypeOfLevel: 1
+      timeRangeIndicator: 2
+      indicatorOfParameter: 44
+      gribTablesVersionNo: 132
+      localDefinitionNumber: 19
+      mars.expver: '9078'

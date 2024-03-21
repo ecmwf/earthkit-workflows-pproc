@@ -74,6 +74,8 @@ class ParamConfig:
             req = Request({**request, **self.in_keys, "source": source}, no_expand)
             window_steps = [x.steps for x in self.windows.ranges]
             req["step"] = sorted(set(sum(window_steps[1:], window_steps[0])))
+            if len(req["step"]) == 1:
+                req["step"] = req["step"][0]
             if request["type"] == "pf":
                 req["number"] = self.members
             elif request["type"] == "cf":

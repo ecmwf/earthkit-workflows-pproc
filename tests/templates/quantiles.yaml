@@ -58,3 +58,15 @@ parameters:
       stepType: diff
       paramId: 200228
     target: "fileset:cascade_quantiles_{param}.grib"
+  - ensemble:
+      operation: quantiles
+      num_quantiles: *quantiles
+    sources:
+      fdb:
+        fc:
+          <<: *base_keys_tp
+          type: pf
+    windows:
+      ranges:
+        - [0, 0]
+    target: "fileset:cascade_quantiles_{param}.grib"

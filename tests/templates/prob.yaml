@@ -210,3 +210,28 @@ parameters:
           date: 20230914
           time: 12
           expver: "0001"
+  - target: "fileset:cascade_prob_{param}.grib"
+    steps:
+      - [120, 240, 6]
+    windows:
+      ranges:
+        - [126, 126]
+    grib_set:
+      paramId: 131073
+    ensemble:
+      operation: threshold_prob
+      comparison: "<="
+      value: 273.15
+      local_scale_factor: 2
+    sources:
+      fdb:
+        fc:
+          class: od
+          stream: enfo
+          type: pf
+          levtype: sfc
+          domain: g
+          param: 122
+          date: 20230914
+          time: 12
+          expver: "0001"

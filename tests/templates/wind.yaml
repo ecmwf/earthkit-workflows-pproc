@@ -77,3 +77,29 @@ parameters:
       bitsPerValue: 24
     ensemble:
       operation: ensms
+  - target: fileset:wind_{step}_{type}.grib
+    param:
+      operation: wind_speed
+    sources:
+      fdb:
+        fc:
+          class: od
+          domain: g
+          expver: '0001'
+          levtype: pl
+          param: [138, 155]
+          stream: enfo
+          levelist: 250
+          date: 20230914
+          time: 12
+          type: pf
+          interpolate: *vod2uv_base_interp  
+    windows:
+      ranges:
+        - [0, 0]
+    grib_set:
+      gribTablesVersionNo: 128
+      indicatorOfParameter: 10
+      bitsPerValue: 24
+    ensemble:
+      operation: ensms
