@@ -411,7 +411,7 @@ class Action(fluent.Action):
             self.sinks.append(
                 fluent.Node(
                     fluent.Payload(
-                        backends.write, (target, fluent.Node.input_name(0), grib_sets)
+                        backends.write, (fluent.Node.input_name(0), target, grib_sets)
                     ),
                     node,
                 )

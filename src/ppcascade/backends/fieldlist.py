@@ -428,7 +428,7 @@ class NumpyFieldListBackend:
         )
         return ret
 
-    def write(loc: str, data: NumpyFieldList, grib_sets: dict):
+    def write(data: NumpyFieldList, loc, grib_sets: dict):
         if loc == "null:":
             return
         target = target_from_location(loc)

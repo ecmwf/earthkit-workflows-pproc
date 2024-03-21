@@ -114,7 +114,7 @@ class ArrayAPIBackend(BaseArrayAPIBackend):
         res = ek_retrieve(request, **kwargs)
         return xp.asarray(res.values)
 
-    def write(loc: str, data, metadata: dict):
+    def write(data, loc: str, metadata: dict):
         if loc != "null:":
             raise ValueError("Only null target supported for array api backend")
         # TODO: Currently just moves the data to CPU

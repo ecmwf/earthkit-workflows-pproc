@@ -67,14 +67,10 @@ def graph_from_config(args):
     return Cascade.graph(args.product, product_args)
 
 
-def parse_options(options: str) -> dict:
+def parse_options(options_str: str) -> dict:
     options = {}
-    for pair in options.split(","):
+    for pair in options_str.split(","):
         key, value = pair.split("=")
-        try:
-            value = int(value)
-        except ValueError:
-            pass
         options[key] = value
     return options
 
@@ -84,22 +80,22 @@ def benchmark(graph: Graph, output_root: str, b_options: str) -> dict:
         return {}
     options = parse_options(b_options)
     with ResourceMeter("BENCHMARK"):
-        if b_options["type"] == "local":
+        if options["type"] == "local":
             resource_map = DaskLocalExecutor().benchmark(
                 graph,
-                n_workers=options["workers"],
+                n_workers=int(options["workers"]),
                 memory_limit=f"{options['memory']}MB",
                 adaptive=False,
                 report=f"{output_root}/dask_report.html",
                 mem_report=f"{output_root}/mem_usage.csv",
             )
-        elif b_options["type"] == "client":
+        elif options["type"] == "client":
             resource_map = DaskClientExecutor().benchmark(
                 graph,
-                scheduler_file=options["scheduler_file"],
+                options["scheduler_file"],
+                options["mem_report"],
                 adaptive=False,
                 report=f"{output_root}/dask_report.html",
-                mem_report=options["mem_report"],
             )
         else:
             raise ValueError(
@@ -118,14 +114,14 @@ def schedule(graph: Graph, s_options: str, resource_map: dict) -> Graph:
 
     with ResourceMeter("SCHEDULE"):
         context_graph = ContextGraph()
-        for index in range(options["workers"]):
+        for index in range(int(options["workers"])):
             context_graph.add_node(
                 f"worker-{index}",
                 type="CPU",
                 speed=1,
-                memory=options["memory"],
+                memory=int(options["memory"]),
             )
-        for index in range(options["workers"] - 1):
+        for index in range(int(options["workers"]) - 1):
             context_graph.add_edge(
                 f"worker-{index}", f"worker-{index+1}", bandwidth=0.1, latency=1
             )
@@ -144,8 +140,8 @@ def execute(graph: Graph, output_root: str, e_options: str):
         if options["type"] == "local":
             DaskLocalExecutor().execute(
                 graph,
-                n_workers=options["workers"],
-                threads_per_worker=options["threads_per_worker"],
+                n_workers=int(options["workers"]),
+                threads_per_worker=int(options["threads_per_worker"]),
                 memory_limit=f"{options['memory']}MB",
                 adaptive=bool(options.get("adaptive", False)),
                 report=f"{output_root}/dask_report.html",
