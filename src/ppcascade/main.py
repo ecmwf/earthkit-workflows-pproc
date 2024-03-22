@@ -18,7 +18,7 @@ from ppcascade.entry.parser import ArgsFile
 
 
 def graph_from_serialisation(args):
-    with open(args.graph_file, "rb") as f:
+    with open(args.file, "rb") as f:
         data = dill.load(f)
     return deserialise(data)
 
@@ -86,7 +86,7 @@ def benchmark(graph: Graph, output_root: str, b_options: str) -> dict:
                 n_workers=int(options["workers"]),
                 memory_limit=f"{options['memory']}MB",
                 adaptive=False,
-                report=f"{output_root}/dask_report.html",
+                report=f"{output_root}/dask_benchmark_report.html",
                 mem_report=f"{output_root}/mem_usage.csv",
             )
         elif options["type"] == "client":
@@ -95,7 +95,7 @@ def benchmark(graph: Graph, output_root: str, b_options: str) -> dict:
                 options["scheduler_file"],
                 options["mem_report"],
                 adaptive=False,
-                report=f"{output_root}/dask_report.html",
+                report=f"{output_root}/dask_benchmark_report.html",
             )
         else:
             raise ValueError(
@@ -144,14 +144,14 @@ def execute(graph: Graph, output_root: str, e_options: str):
                 threads_per_worker=int(options["threads_per_worker"]),
                 memory_limit=f"{options['memory']}MB",
                 adaptive=bool(options.get("adaptive", False)),
-                report=f"{output_root}/dask_report.html",
+                report=f"{output_root}/dask_execution_report.html",
             )
         elif options["type"] == "client":
             DaskClientExecutor().execute(
                 graph,
                 options["scheduler_file"],
                 bool(options.get("adaptive", False)),
-                report=f"{output_root}/dask_report.html",
+                report=f"{output_root}/dask_execution_report.html",
             )
         else:
             raise ValueError(
