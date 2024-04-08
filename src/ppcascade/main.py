@@ -69,6 +69,9 @@ def graph_from_config(args):
 
 def parse_options(options_str: str) -> dict:
     options = {}
+    if len(options_str) == 0:
+        return options
+
     for pair in options_str.split(","):
         key, value = pair.split("=")
         options[key] = value
@@ -141,9 +144,9 @@ def execute(graph: Graph, output_root: str, e_options: str):
             DaskLocalExecutor().execute(
                 graph,
                 n_workers=int(options["workers"]),
-                threads_per_worker=int(options["threads_per_worker"]),
+                threads_per_worker=int(options.get("threads_per_worker", 1)),
                 memory_limit=f"{options['memory']}MB",
-                adaptive=bool(options.get("adaptive", False)),
+                adaptive_kwargs=parse_options(options.get("adaptive", "")),
                 report=f"{output_root}/dask_execution_report.html",
             )
         elif options["type"] == "client":

@@ -2,6 +2,7 @@ import array_api_compat
 import numpy as np
 from meters import ResourceMeter
 from os.path import join as pjoin
+from typing import TypeAlias
 
 from meteokit import extreme
 from meteokit.stats import iter_quantiles
@@ -21,15 +22,10 @@ from pproc.clustereps.__main__ import write_cluster_attr_grib
 from pproc.clustereps.cluster import get_output_keys
 from cascade.backends import num_args
 
-from ppcascade.utils.grib import (
-    window_grib_headers,
-    extreme_grib_headers,
-    threshold_grib_headers,
-)
-from ppcascade.wrappers.metadata import GribBufferMetaData
 from ppcascade.utils.patch import PatchModule
-from ppcascade.utils.window import Range
 from ppcascade.utils.io import retrieve as ek_retrieve
+from ppcascade.utils import grib
+from ppcascade.wrappers.metadata import GribMetadata
 
 
 def standardise_output(data):
@@ -50,6 +46,26 @@ def comp_str2func(array_module, comparison: str):
     return array_module.greater
 
 
+Metadata: TypeAlias = "dict | callable | None"
+
+
+def resolve_metadata(metadata: Metadata, *args) -> dict:
+    if metadata is None:
+        return {}
+    if isinstance(metadata, dict):
+        return metadata
+    return metadata(*args)
+
+
+def new_fieldlist(data, metadata: list[GribMetadata], overrides: dict):
+    if len(overrides) > 0:
+        metadata = [metadata[x].override(overrides) for x in range(len(metadata))]
+    return FieldList.from_numpy(
+        standardise_output(data),
+        metadata,
+    )
+
+
 class NumpyFieldListBackend:
     def _merge(*fieldlists: list[NumpyFieldList]):
         """
@@ -64,17 +80,21 @@ class NumpyFieldListBackend:
         xp = array_api_compat.array_namespace(*values)
         return xp.asarray(values)
 
-    def multi_arg_function(func: str, *arrays: list[NumpyFieldList]) -> NumpyFieldList:
+    def multi_arg_function(
+        func: str, *arrays: list[NumpyFieldList], metadata: Metadata = None
+    ) -> NumpyFieldList:
         with ResourceMeter(func.upper()):
             merged_array = NumpyFieldListBackend._merge(*arrays)
             xp = array_api_compat.array_namespace(*merged_array)
             res = standardise_output(getattr(xp, func)(merged_array, axis=0))
-            return FieldList.from_numpy(
-                res, [arrays[0][x].metadata() for x in range(len(res))]
+            return new_fieldlist(
+                res,
+                [arrays[0][x].metadata() for x in range(len(res))],
+                resolve_metadata(metadata, *arrays),
             )
 
     def two_arg_function(
-        func: str, *arrays: NumpyFieldList, extract_keys: tuple = ()
+        func: str, *arrays: NumpyFieldList, metadata: Metadata = None
     ) -> NumpyFieldList:
         with ResourceMeter(func.upper()):
             # First argument must be FieldList
@@ -82,40 +102,55 @@ class NumpyFieldListBackend:
             val1 = arrays[0].values
             if isinstance(arrays[1], FieldList):
                 val2 = arrays[1].values
-                arr2_meta = arrays[1][0].metadata().buffer_to_metadata()
-                override = {key: arr2_meta.get(key) for key in extract_keys}
+                metadata = resolve_metadata(metadata, *arrays)
                 xp = array_api_compat.array_namespace(val1, val2)
             else:
                 val2 = arrays[1]
-                override = {}
+                metadata = resolve_metadata(metadata, arrays[0])
                 xp = array_api_compat.array_namespace(val1)
-
             res = getattr(xp, func)(val1, val2)
-            metadata = [
-                arrays[0][x].metadata().override(override) for x in range(len(res))
-            ]
-            return FieldList.from_numpy(standardise_output(res), metadata)
+            return new_fieldlist(
+                res, [arrays[0][x].metadata() for x in range(len(res))], metadata
+            )
 
-    def mean(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
-        return NumpyFieldListBackend.multi_arg_function("mean", *arrays)
+    def mean(
+        *arrays: list[NumpyFieldList], metadata: Metadata = None
+    ) -> NumpyFieldList:
+        return NumpyFieldListBackend.multi_arg_function(
+            "mean", *arrays, metadata=metadata
+        )
 
-    def std(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
-        return NumpyFieldListBackend.multi_arg_function("std", *arrays)
+    def std(*arrays: list[NumpyFieldList], metadata: Metadata = None) -> NumpyFieldList:
+        return NumpyFieldListBackend.multi_arg_function(
+            "std", *arrays, metadata=metadata
+        )
 
-    def min(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
-        return NumpyFieldListBackend.multi_arg_function("min", *arrays)
+    def min(*arrays: list[NumpyFieldList], metadata: Metadata = None) -> NumpyFieldList:
+        return NumpyFieldListBackend.multi_arg_function(
+            "min", *arrays, metadata=metadata
+        )
 
-    def max(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
-        return NumpyFieldListBackend.multi_arg_function("max", *arrays)
+    def max(*arrays: list[NumpyFieldList], metadata: Metadata = None) -> NumpyFieldList:
+        return NumpyFieldListBackend.multi_arg_function(
+            "max", *arrays, metadata=metadata
+        )
 
-    def sum(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
-        return NumpyFieldListBackend.multi_arg_function("sum", *arrays)
+    def sum(*arrays: list[NumpyFieldList], metadata: Metadata = None) -> NumpyFieldList:
+        return NumpyFieldListBackend.multi_arg_function(
+            "sum", *arrays, metadata=metadata
+        )
 
-    def prod(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
-        return NumpyFieldListBackend.multi_arg_function("prod", *arrays)
+    def prod(
+        *arrays: list[NumpyFieldList], metadata: Metadata = None
+    ) -> NumpyFieldList:
+        return NumpyFieldListBackend.multi_arg_function(
+            "prod", *arrays, metadata=metadata
+        )
 
-    def var(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
-        return NumpyFieldListBackend.multi_arg_function("var", *arrays)
+    def var(*arrays: list[NumpyFieldList], metadata: Metadata = None) -> NumpyFieldList:
+        return NumpyFieldListBackend.multi_arg_function(
+            "var", *arrays, metadata=metadata
+        )
 
     def stack(*arrays: list[NumpyFieldList], axis: int = 0) -> NumpyFieldList:
         if axis != 0:
@@ -125,42 +160,40 @@ class NumpyFieldListBackend:
         ), "Can not stack FieldLists with more than one element, use concat"
         return NumpyFieldListBackend.concat(*arrays)
 
-    def add(*arrays: list[NumpyFieldList], extract_keys: tuple = ()) -> NumpyFieldList:
-        return NumpyFieldListBackend.two_arg_function(
-            "add", *arrays, extract_keys=extract_keys
-        )
+    def add(*arrays: list[NumpyFieldList], metadata: Metadata = None) -> NumpyFieldList:
+        return NumpyFieldListBackend.two_arg_function("add", *arrays, metadata=metadata)
 
     def subtract(
-        *arrays: list[NumpyFieldList], extract_keys: tuple = ()
+        *arrays: list[NumpyFieldList], metadata: Metadata = None
     ) -> NumpyFieldList:
         return NumpyFieldListBackend.two_arg_function(
-            "subtract", *arrays, extract_keys=extract_keys
+            "subtract", *arrays, metadata=metadata
         )
 
     @num_args(2)
-    def diff(*arrays: list[NumpyFieldList], extract_keys: tuple = ()) -> NumpyFieldList:
+    def diff(
+        *arrays: list[NumpyFieldList], metadata: Metadata = None
+    ) -> NumpyFieldList:
         return NumpyFieldListBackend.multiply(
-            NumpyFieldListBackend.subtract(*arrays, extract_keys=extract_keys), -1
+            NumpyFieldListBackend.subtract(*arrays, metadata=metadata), -1
         )
 
     def multiply(
-        *arrays: list[NumpyFieldList], extract_keys: tuple = ()
+        *arrays: list[NumpyFieldList], metadata: Metadata = None
     ) -> NumpyFieldList:
         return NumpyFieldListBackend.two_arg_function(
-            "multiply", *arrays, extract_keys=extract_keys
+            "multiply", *arrays, metadata=metadata
         )
 
     def divide(
-        *arrays: list[NumpyFieldList], extract_keys: tuple = ()
+        *arrays: list[NumpyFieldList], metadata: Metadata = None
     ) -> NumpyFieldList:
         return NumpyFieldListBackend.two_arg_function(
-            "divide", *arrays, extract_keys=extract_keys
+            "divide", *arrays, metadata=metadata
         )
 
-    def pow(*arrays: list[NumpyFieldList], extract_keys: tuple = ()) -> NumpyFieldList:
-        return NumpyFieldListBackend.two_arg_function(
-            "pow", *arrays, extract_keys=extract_keys
-        )
+    def pow(*arrays: list[NumpyFieldList], metadata: Metadata = None) -> NumpyFieldList:
+        return NumpyFieldListBackend.two_arg_function("pow", *arrays, metadata=metadata)
 
     def concat(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
         """
@@ -186,20 +219,24 @@ class NumpyFieldListBackend:
             indices = [indices]
         return array[indices]
 
-    def norm(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
+    def norm(
+        *arrays: list[NumpyFieldList], metadata: Metadata = None
+    ) -> NumpyFieldList:
         merged_array = NumpyFieldListBackend._merge(*arrays)
         xp = array_api_compat.array_namespace(merged_array)
         norm = standardise_output(xp.sqrt(xp.sum(xp.pow(merged_array, 2), axis=0)))
-        return FieldList.from_numpy(
-            norm, [arrays[0][x].metadata() for x in range(len(norm))]
+        return new_fieldlist(
+            norm,
+            [arrays[0][x].metadata() for x in range(len(norm))],
+            resolve_metadata(metadata, *arrays),
         )
 
     def threshold(
         arr: NumpyFieldList,
         comparison: str,
         value: float,
-        local_scale_factor=None,
-        edition: int = 1,
+        *,
+        metadata: Metadata = None,
     ) -> NumpyFieldList:
         with ResourceMeter("THRESHOLD"):
             xp = array_api_compat.array_namespace(arr.values)
@@ -207,76 +244,57 @@ class NumpyFieldListBackend:
             is_nan = xp.isnan(arr.values)
             thesh = comp_str2func(xp, comparison)(arr.values, value)
             res = xp.where(is_nan, xp.nan, thesh)
-            threshold_headers = threshold_grib_headers(
-                comparison, value, local_scale_factor, edition
-            )
-            metadata = [
-                arr[x].metadata().override(threshold_headers) for x in range(len(res))
-            ]
-            return FieldList.from_numpy(standardise_output(res), metadata)
+            return new_fieldlist(res, arr.metadata(), resolve_metadata(metadata, arr))
 
     def efi(
         clim: NumpyFieldList,
         ens: NumpyFieldList,
         eps: float,
+        *,
+        metadata: Metadata = None,
     ) -> NumpyFieldList:
         with ResourceMeter(f"EFI, clim {clim.values.shape}, ens {ens.values.shape}"):
-            extreme_headers = extreme_grib_headers(clim, ens)
-            if False:
-                # TODO: whether this is efi control should be deduced from grib data
-                extreme_headers.update(
-                    {"marsType": "efic", "totalNumber": 1, "number": 0}
-                )
-            else:
-                extreme_headers.update({"marsType": "efi", "efiOrder": 0, "number": 0})
-            metadata = ens[0].metadata().override(extreme_headers)
             xp = array_api_compat.array_namespace(ens.values, clim.values)
             with PatchModule(extreme, "numpy", xp):
                 res = extreme.efi(clim.values, ens.values, eps)
-            return FieldList.from_numpy(standardise_output(res), metadata)
+            return new_fieldlist(
+                res,
+                [ens[0].metadata()],
+                {**resolve_metadata(metadata, clim, ens), **grib.efi(clim, ens)},
+            )
 
     def sot(
         clim: NumpyFieldList,
         ens: NumpyFieldList,
         number: int,
         eps: float,
+        *,
+        metadata: Metadata = None,
     ) -> NumpyFieldList:
         with ResourceMeter("SOT"):
-            extreme_headers = extreme_grib_headers(clim, ens)
-            if number == 90:
-                efi_order = 99
-            elif number == 10:
-                efi_order = 1
-            else:
-                raise Exception(
-                    "SOT value '{sot}' not supported in template! Only accepting 10 and 90"
-                )
-            metadata = (
-                ens[0]
-                .metadata()
-                .override(
-                    {
-                        **extreme_headers,
-                        "marsType": "sot",
-                        "efiOrder": efi_order,
-                        "number": number,
-                    }
-                )
-            )
-
             xp = array_api_compat.array_namespace(ens.values, clim.values)
             with PatchModule(extreme, "numpy", xp):
                 res = extreme.sot(clim.values, ens.values, number, eps)
-            return FieldList.from_numpy(standardise_output(res), metadata)
+            return new_fieldlist(
+                res,
+                [ens[0].metadata()],
+                {
+                    **resolve_metadata(metadata, clim, ens),
+                    **grib.sot(clim, ens, number),
+                },
+            )
 
-    def quantiles(ens: NumpyFieldList, quantile: float) -> NumpyFieldList:
+    def quantiles(
+        ens: NumpyFieldList, quantile: float, *, metadata: Metadata = None
+    ) -> NumpyFieldList:
         with ResourceMeter("QUANTILES"):
             xp = array_api_compat.array_namespace(ens.values)
             with PatchModule(extreme, "numpy", xp):
                 res = list(iter_quantiles(ens.values, [quantile], method="numpy"))[0]
-            return FieldList.from_numpy(
-                standardise_output(res),
-                ens[0].metadata().override({"perturbationNumber": quantile}),
+            return new_fieldlist(
+                res,
+                [ens[0].metadata()],
+                {**resolve_metadata(metadata, ens), "perturbationNumber": quantile},
             )
 
     def filter(
@@ -286,12 +304,15 @@ class NumpyFieldListBackend:
         threshold: float,
         *,
         replacement: float = 0,
+        metadata: Metadata = None,
     ) -> NumpyFieldList:
         with ResourceMeter("FILTER"):
             xp = array_api_compat.array_namespace(arr1.values, arr2.values)
             condition = comp_str2func(xp, comparison)(arr2.values, threshold)
             res = xp.where(condition, replacement, arr1.values)
-            return FieldList.from_numpy(standardise_output(res), arr1.metadata())
+            return new_fieldlist(
+                res, arr1.metadata(), resolve_metadata(metadata, arr1, arr2)
+            )
 
     def pca(
         config,
@@ -326,7 +347,7 @@ class NumpyFieldListBackend:
 
     def cluster(
         config,
-        pca_output: tuple[dict, GribBufferMetaData],
+        pca_output: tuple[dict, GribMetadata],
         ncomp_file: str,
         indexes: str,
         deterministic: str,
@@ -424,11 +445,14 @@ class NumpyFieldListBackend:
         res = ek_retrieve(request, **kwargs)
         ret = FieldList.from_numpy(
             np.asarray(res.values),
-            list(map(GribBufferMetaData, res.metadata())),
+            [GribMetadata(metadata._handle) for metadata in res.metadata()],
         )
         return ret
 
-    def write(data: NumpyFieldList, loc, grib_sets: dict):
+    def set_metadata(data: NumpyFieldList, metadata: dict) -> NumpyFieldList:
+        return new_fieldlist(data.values, data.metadata(), metadata)
+
+    def write(data: NumpyFieldList, loc, metadata: dict | None = None):
         if loc == "null:":
             return
         target = target_from_location(loc)
@@ -436,16 +460,11 @@ class NumpyFieldListBackend:
             # Allows file to be appended on each write call
             target.enable_recovery()
         assert len(data) == 1, f"Expected single field, received {len(data)}"
-        metadata = grib_sets.copy()
-        metadata.update(data.metadata()[0]._d)
-        set_missing = [key for key, value in metadata.items() if value == "MISSING"]
-        for missing_key in set_missing:
-            metadata.pop(missing_key)
 
-        template = data.metadata()[0].buffer_to_metadata().override(metadata)
+        template = data.metadata()[0]
+        if metadata is not None:
+            template = template.override(metadata)
 
-        for missing_key in set_missing:
-            template._handle.set_missing(missing_key)
         with ResourceMeter(f"WRITE {loc}"):
             write_grib(target, template._handle, data[0].values)
 
@@ -456,12 +475,11 @@ class NumpyFieldListBackend:
         cluster_dests,
     ):
         metadata, scdata, anom, cluster_att, min_dist = attribution_output
-        grib_template = metadata.buffer_to_metadata()
         cluster_type, ind_cl, rep_members, det_index = [
-            metadata._d[x] for x in ["type", "ind_cl", "rep_members", "det_index"]
+            metadata.get(x) for x in ["type", "ind_cl", "rep_members", "det_index"]
         ]
 
-        keys, steps = get_output_keys(config, grib_template)
+        keys, steps = get_output_keys(config, metadata)
         with ResourceMeter(f"WRITE {scenario}"):
             ## Write anomalies and cluster scenarios
             dest, adest = cluster_dests

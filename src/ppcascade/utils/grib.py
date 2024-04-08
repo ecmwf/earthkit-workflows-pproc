@@ -1,41 +1,33 @@
+import functools
+
 from earthkit.data import FieldList
 
 from .window import Range
 
 
-def time_range_indicator(step: int) -> int:
-    if step == 0:
-        return 1
-    if step > 255:
-        return 10
-    return 0
+def window(operation: str, range: Range) -> dict:
+    # Note: don't need to step for len(range.steps) == 1, as should already
+    # be correct in template
+    if len(range.steps) == 1:
+        return {}
 
-
-def window_grib_headers(operation: str, range: Range) -> dict:
-    ret = {}
-    try:
-        ret["step"] = int(range.name)
-        ret["timeRangeIndicator"] = time_range_indicator(ret["step"])
-    except ValueError:
-        ret["stepRange"] = range.name
-        if operation == "diff":
-            ret.update({"stepType": "diff", "timeRangeIndicator": 5})
-        if operation == "mean":
-            ret["timeRangeIndicator"] = 3
-            ret["numberIncludedInAverage"] = len(range.steps)
-            ret["numberMissingFromAveragesOrAccumulations"] = 0
-        if operation in ["minimum", "maxmimum"]:
-            ret["timeRangeIndicator"] = 2
-        ret.setdefault("stepType", "max")
+    ret = {"stepRange": range.name}
+    if operation == "diff":
+        ret.update({"stepType": "diff", "timeRangeIndicator": 5})
+    if operation == "mean":
+        ret["timeRangeIndicator"] = 3
+        ret["numberIncludedInAverage"] = len(range.steps)
+        ret["numberMissingFromAveragesOrAccumulations"] = 0
+    if operation in ["min", "max"]:
+        ret["timeRangeIndicator"] = 2
+    ret.setdefault("stepType", "max")
     return ret
 
 
-def extreme_grib_headers(clim: FieldList, ens: FieldList) -> dict:
+def extreme(clim: FieldList, ens: FieldList) -> dict:
     extreme_headers = {}
-    ens_template = ens.metadata()[0].buffer_to_metadata()
 
     # set clim keys
-    clim_template = clim.metadata()[0].buffer_to_metadata()
     clim_keys = [
         "powerOfTenUsedToScaleClimateWeight",
         "weightAppliedToClimateMonth1",
@@ -46,7 +38,7 @@ def extreme_grib_headers(clim: FieldList, ens: FieldList) -> dict:
         "numberOfBitsContainingEachPackedValue",
     ]
     for key in clim_keys:
-        extreme_headers[key] = clim_template.get(key)
+        extreme_headers[key] = clim.metadata()[0].get(key)
 
     fc_keys = [
         "date",
@@ -54,18 +46,47 @@ def extreme_grib_headers(clim: FieldList, ens: FieldList) -> dict:
         "totalNumber",
     ]
     for key in fc_keys:
-        extreme_headers[key] = ens_template.get(key)
-
-    extreme_headers["ensembleSize"] = len(ens)
+        extreme_headers[key] = ens.metadata()[0].get(key)
 
     return extreme_headers
 
 
-def threshold_grib_headers(
-    comparison: str, threshold: float, local_scale_factor: int, edition: int
+def efi(ens: FieldList, clim: FieldList) -> dict:
+    ret = extreme(ens, clim)
+    if len(ens) == 1 and ens.metadata()[0].get("type") == "cf":
+        ret.update({"marsType": "efic", "totalNumber": 1, "number": 0})
+    else:
+        ret.update({"marsType": "efi", "efiOrder": 0, "number": 0})
+    return ret
+
+
+def sot(ens: FieldList, clim: FieldList, number: int) -> dict:
+    ret = extreme(ens, clim)
+    if number == 90:
+        efi_order = 99
+    elif number == 10:
+        efi_order = 1
+    else:
+        raise Exception(
+            "SOT value '{sot}' not supported in template! Only accepting 10 and 90"
+        )
+    ret.update(
+        {
+            "marsType": "sot",
+            "efiOrder": efi_order,
+            "number": number,
+        }
+    )
+    return ret
+
+
+def threshold(
+    comparison: str, threshold: float, local_scale_factor: int | None
 ) -> dict:
-    if edition == 2:
-        return {}
+    """
+    Generated metadata required for computing threshold probabilities. Note,
+    only required for GRIB edition 1 products
+    """
 
     ret = {}
     if local_scale_factor is not None:
@@ -79,3 +100,14 @@ def threshold_grib_headers(
     elif ">" in comparison:
         ret.update({"thresholdIndicator": 1, "lowerThreshold": threshold_value})
     return ret
+
+
+def anomaly_clim(clim: FieldList) -> dict:
+    """
+    Get required information from climatology metadata. Note,
+    only required for GRIB edition 2 threshold probability products
+    """
+    return {
+        key: clim.metadata()[0].get(key)
+        for key in ["climateDateFrom", "climateDateTo", "referenceDate"]
+    }

@@ -1,8 +1,10 @@
 import argparse
 
 from cascade.graph import Graph, deduplicate_nodes
+from cascade.fluent import Payload
 
 from .fluent import PProcFluent
+from .utils import grib
 from .config import (
     Config,
     ClusterConfig,
@@ -34,6 +36,9 @@ def ensemble_anomaly(args: argparse.Namespace, deduplicate: bool = True):
         climatology = fluent.source(
             param_config.clim_request(args.climatology), join_key="step"
         )  # Will contain type em and es
+        clim_headers = climatology.select({"type": "em"}, drop=True).map(
+            Payload(grib.anomaly_clim)
+        )
 
         total_graph += (
             fluent.source(
@@ -59,10 +64,11 @@ def ensemble_anomaly(args: argparse.Namespace, deduplicate: bool = True):
                 param_config.ensemble["operation"],
                 dim=ensemble_dim,
                 **param_config.ensemble["kwargs"],
+                metadata=param_config.out_keys,
             )
             .write(
                 param_config.target,
-                param_config.out_keys,
+                clim_headers if param_config.out_keys.get("edition", 1) == 2 else None,
             )
             .graph()
         )
@@ -112,11 +118,11 @@ def ensemble(args: argparse.Namespace, deduplicate: bool = True):
             .ensemble_operation(
                 param_config.ensemble["operation"],
                 dim=ensemble_dim,
+                metadata=param_config.out_keys,
                 **param_config.ensemble["kwargs"],
             )
             .write(
                 param_config.target,
-                param_config.out_keys,
             )
             .graph()
         )
@@ -178,10 +184,10 @@ def extreme(args: argparse.Namespace, deduplicate: bool = True):
                 param_config.windows.ranges,
                 ensemble_dim=ensemble_dim,
                 **param_config.ensemble["kwargs"],
+                metadata=param_config.out_keys,
             )
             .write(
                 param_config.target,
-                param_config.out_keys,
             )
             .graph()
         )

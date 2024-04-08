@@ -1,26 +1,18 @@
 import numpy as np
 import xarray as xr
-import itertools
+import functools
+import inspect
 
 from cascade import fluent
 from cascade import backends
 
 from .utils.window import Range
 from .utils.request import Request, MultiSourceRequest
+from .utils import grib
+from .backends import fieldlist
 
 
 class Action(fluent.Action):
-    def non_descript_dim(self, dim: str):
-        """
-        Mark in node attributes a dimension in node array that is not
-        a metadata key
-        """
-        self.nodes.attrs.setdefault("grib_exclude", set())
-        self.nodes.attrs["grib_exclude"].add(dim)
-
-    def non_descript_dims(self):
-        return self.nodes.attrs.pop("grib_exclude", [])
-
     def extreme(
         self,
         climatology: fluent.Action,
@@ -31,6 +23,7 @@ class Action(fluent.Action):
         ensemble_dim: str = "number",
         window_dim: str = "step",
         new_dim: str = "type",
+        metadata: dict | None = None,
     ):
         """
         Create nodes computing the EFI and SOT
@@ -52,17 +45,16 @@ class Action(fluent.Action):
         """
         eps = float(eps)
         concat = self.concatenate(ensemble_dim)
-        efi = concat.efi(climatology, windows, eps, window_dim)
+        efi = concat.efi(climatology, windows, eps, window_dim, metadata)
         efi._add_dimension(new_dim, "efi")
         if efi_control is not None:
             control = self.select(efi_control, drop=True).efi(
-                climatology, windows, eps, window_dim
+                climatology, windows, eps, window_dim, metadata
             )
             control._add_dimension(new_dim, "efic")
             efi = efi.join(control, new_dim)
-        sot = concat.sot(climatology, windows, eps, sot, window_dim, new_dim)
+        sot = concat.sot(climatology, windows, eps, sot, window_dim, new_dim, metadata)
         ret = efi.join(sot, new_dim)
-        ret.non_descript_dim(new_dim)
         return ret
 
     def ensemble_extreme(
@@ -92,6 +84,7 @@ class Action(fluent.Action):
         windows: list[Range],
         eps: float,
         dim: str = "step",
+        metadata: dict | None = None,
     ):
         """
         Create nodes computing the EFI for each window. Expects ensemble member dimension
@@ -115,13 +108,14 @@ class Action(fluent.Action):
             payload = fluent.Payload(
                 backends.efi,
                 (fluent.Node.input_name(1), fluent.Node.input_name(0), eps),
+                {"metadata": metadata} if metadata is not None else {},
             )
             return self.join(climatology, "**datatype**").reduce(payload)
 
         join = self.join(climatology, "**datatype**", match_coord_values=True)
         return join.transform(
             _efi_window_transform,
-            [({dim: window.name}, eps) for window in windows],
+            [({dim: window.name}, eps, metadata) for window in windows],
             dim,
         )
 
@@ -133,6 +127,7 @@ class Action(fluent.Action):
         sot: list[int],
         dim: str = "step",
         new_dim: str = "sot",
+        metadata: dict | None = None,
     ):
         """
         Create nodes computing the SOT for each window. Expects ensemble member dimension
@@ -161,14 +156,17 @@ class Action(fluent.Action):
             ret = self.join(
                 climatology, "**datatype**", match_coord_values=True
             ).transform(
-                _sot_transform, [(int(num), eps, new_dim) for num in sot], new_dim
+                _sot_transform,
+                [(int(num), eps, new_dim, metadata) for num in sot],
+                new_dim,
             )
         else:
-            params = [({dim: window.name}, sot, eps, new_dim) for window in windows]
+            params = [
+                ({dim: window.name}, sot, eps, new_dim, metadata) for window in windows
+            ]
             ret = self.join(
                 climatology, "**datatype**", match_coord_values=True
             ).transform(_sot_window_transform, params, dim)
-        ret.non_descript_dim(new_dim)
         return ret
 
     def ensms(
@@ -176,6 +174,7 @@ class Action(fluent.Action):
         dim: str = "number",
         new_dim: str | xr.DataArray = xr.DataArray(["mean", "std"], name="type"),
         batch_size: int = 0,
+        metadata: dict | None = None,
     ):
         """
         Creates nodes computing the mean and standard deviation along the specified dimension. A new dimension
@@ -195,10 +194,11 @@ class Action(fluent.Action):
         ------
         MultiAction
         """
-        mean = self.mean(dim, batch_size)
-        std = self.std(dim, batch_size)
+        if metadata is None:
+            metadata = {}
+        mean = self.mean(dim, batch_size, metadata={"type": "em", **metadata})
+        std = self.std(dim, batch_size, metadata={"type": "es", **metadata})
         res = mean.join(std, new_dim)
-        res.non_descript_dim(new_dim if isinstance(new_dim, str) else new_dim.name)
         return res
 
     def threshold_prob(
@@ -206,40 +206,58 @@ class Action(fluent.Action):
         comparison: str,
         value: float,
         local_scale_factor: float = None,
-        edition: int = 1,  # TODO: set this properly
         dim: str = "number",
         batch_size: int = 0,
+        metadata: dict | None = None,
     ):
+        if metadata is None:
+            metadata = {}
+        if int(metadata.get("edition", 1)) == 1:
+            metadata.update(
+                grib.threshold(
+                    comparison,
+                    float(value),
+                    (
+                        float(local_scale_factor)
+                        if local_scale_factor is not None
+                        else None
+                    ),
+                )
+            )
         payload = fluent.Payload(
             backends.threshold,
             (
                 fluent.Node.input_name(0),
                 comparison,
                 float(value),
-                float(local_scale_factor) if local_scale_factor is not None else None,
-                edition,
             ),
         )
-        return self.map(payload).multiply(100).mean(dim, batch_size)
+        return self.map(payload).multiply(100).mean(dim, batch_size, metadata=metadata)
 
     def anomaly(
         self,
         clim_mean: fluent.Action,
         clim_std: fluent.Action,
         std_anomaly: bool = False,
-        **method_kwargs,
+        metadata: dict | None = None,
     ):
-        anom = self.subtract(clim_mean, **method_kwargs)
+        anom = self.subtract(clim_mean, metadata=metadata)
         if not std_anomaly:
             return anom
-        return anom.divide(clim_std, **method_kwargs)
+        return anom.divide(clim_std)
 
     def quantiles(
-        self, num_quantiles: int = 100, dim: str = "number", new_dim: str = "quantile"
+        self,
+        num_quantiles: int = 100,
+        dim: str = "number",
+        new_dim: str = "quantile",
+        metadata: dict | None = None,
     ):
-        params = [(x, new_dim) for x in np.linspace(0.0, 1.0, int(num_quantiles) + 1)]
+        params = [
+            (x, new_dim, metadata)
+            for x in np.linspace(0.0, 1.0, int(num_quantiles) + 1)
+        ]
         ret = self.concatenate(dim).transform(_quantiles_transform, params, new_dim)
-        ret.non_descript_dim(new_dim)
         return ret
 
     def wind_speed(self, vod2uv: bool, dim: str = "param"):
@@ -303,6 +321,12 @@ class Action(fluent.Action):
             return self
         if isinstance(operation, str):
             if hasattr(self, operation):
+                if operation == "mean":
+                    kwargs.setdefault("metadata", {})
+                    kwargs["metadata"] = {"type": "em"}
+                elif operation == "std":
+                    kwargs.setdefault("metadata", {})
+                    kwargs["metadata"] = {"type": "es"}
                 return getattr(self, operation)(dim=dim, **kwargs)
             operation = fluent.Payload(getattr(backends, operation), kwargs=kwargs)
         return self.reduce(operation, dim, batch_size)
@@ -313,6 +337,7 @@ class Action(fluent.Action):
         ranges: list[Range],
         dim: str = "step",
         batch_size: int = 0,
+        **kwargs,
     ):
         """
         Reduction operation across steps. If batch_size > 1 and less than the size
@@ -339,7 +364,7 @@ class Action(fluent.Action):
             self._squeeze_dimension(dim)
             return self
 
-        params = [(dim, range, operation, batch_size) for range in ranges]
+        params = [(dim, range, operation, batch_size, kwargs) for range in ranges]
         return self.transform(_window_transform, params, dim)
 
     def pca(self, config, mask, target: str = None):
@@ -396,36 +421,43 @@ class Action(fluent.Action):
             )
         )
 
-    def write(self, target, config_grib_sets: dict):
-        coords = list(self.nodes.dims)
-        exclude = self.non_descript_dims()
-        for node_attrs in itertools.product(
-            *[self.nodes.coords[key].data for key in coords]
-        ):
-            node_coords = {key: node_attrs[index] for index, key in enumerate(coords)}
-            node = self.node(node_coords)
+    def write(self, target: str, metadata: dict | fluent.Action | None = None):
+        if isinstance(metadata, fluent.Action):
+            res = self.join(metadata, "**datatype**", match_coord_values=True).reduce(
+                fluent.Payload(
+                    backends.write,
+                    (fluent.Node.input_name(0), target, fluent.Node.input_name(1)),
+                ),
+                dim="**datatype**",
+            )
+            res.sinks = list(res.nodes.data.flatten())
+            return res
 
-            grib_sets = config_grib_sets.copy()
-            grib_sets.update(self.nodes.attrs)
-            grib_sets.update({k: v for k, v in node_coords.items() if k not in exclude})
+        it = np.nditer(self.nodes, flags=["refs_ok"])
+        for node in it:
             self.sinks.append(
                 fluent.Node(
                     fluent.Payload(
-                        backends.write, (fluent.Node.input_name(0), target, grib_sets)
+                        backends.write,
+                        (fluent.Node.input_name(0), target),
+                        {"metadata": metadata},
                     ),
-                    node,
+                    node[()],
                 )
             )
         return self
 
 
 def _sot_transform(
-    action: fluent.Action, number: int, eps: float, new_dim: str
+    action: fluent.Action, number: int, eps: float, new_dim: str, metadata: dict | None
 ) -> fluent.Action:
+    if metadata is None:
+        metadata = {}
     new_sot = action.reduce(
         fluent.Payload(
             backends.sot,
             (fluent.Node.input_name(1), fluent.Node.input_name(0), number, eps),
+            {"metadata": metadata},
         )
     )
     new_sot._add_dimension(new_dim, number)
@@ -433,54 +465,95 @@ def _sot_transform(
 
 
 def _sot_window_transform(
-    action: fluent.Action, selection: dict, sot: list[int], eps: float, new_dim: str
+    action: fluent.Action,
+    selection: dict,
+    sot: list[int],
+    eps: float,
+    new_dim: str,
+    metadata: dict,
 ) -> fluent.Action:
     return action.select(selection).transform(
-        _sot_transform, [(int(num), eps, new_dim) for num in sot], new_dim
+        _sot_transform, [(int(num), eps, new_dim, metadata) for num in sot], new_dim
     )
 
 
 def _efi_window_transform(
-    action: fluent.Action, selection: dict, eps: float
+    action: fluent.Action, selection: dict, eps: float, metadata: dict | None
 ) -> fluent.Action:
+    if metadata is None:
+        metadata = {}
     ret = action.select(selection).reduce(
         fluent.Payload(
             backends.efi,
             (fluent.Node.input_name(1), fluent.Node.input_name(0), eps),
+            {"metadata": metadata},
         ),
         dim="**datatype**",
     )
     return ret
 
 
-def _quantiles_transform(action, quantile: float, new_dim: str):
-    payload = fluent.Payload(backends.quantiles, (fluent.Node.input_name(0), quantile))
+def _quantiles_transform(action, quantile: float, new_dim: str, metadata: dict | None):
+    if metadata is None:
+        metadata = {}
+    payload = fluent.Payload(
+        backends.quantiles,
+        (fluent.Node.input_name(0), quantile),
+        {"metadata": metadata},
+    )
     new_quantile = action.map(payload)
     new_quantile._add_dimension(new_dim, quantile)
     return new_quantile
 
 
 def _window_transform(
-    action: fluent.Action, dim: str, range: Range, operation: str, batch_size: int
+    action: fluent.Action,
+    dim: str,
+    range: Range,
+    operation: str | fluent.Payload,
+    batch_size: int,
+    kwargs: dict,
 ) -> fluent.Action:
     window_action = action.select({dim: range.steps})
     if len(range.steps) == 1:
-        # Nothing to reduce
+        # Nothing to reduce and no metadata to set
         return window_action
+
+    batched = batch_size > 1 and len(range.steps) > batch_size
+    window_metadata = grib.window(operation, range)
+    if not batched:
+        kwargs.setdefault("metadata", {}).update(window_metadata)
+    else:
+        metadata = kwargs.pop("metadata", {})
+        metadata.update(window_metadata)
+        window_metadata = metadata
 
     if isinstance(operation, str):
         if hasattr(window_action, operation):
+            # Use method if it exists as there can be special batch handling, such as
+            # for mean
             window_action = getattr(window_action, operation)(
-                dim=dim, batch_size=batch_size
+                dim=dim, batch_size=batch_size, **kwargs
             )
         else:
-            operation = fluent.Payload(getattr(backends, operation))
+            operation = fluent.Payload(
+                getattr(backends, operation),
+                kwargs=kwargs,
+            )
             window_action = window_action.reduce(operation, dim, batch_size=batch_size)
     else:
         window_action = window_action.reduce(operation, dim, batch_size=batch_size)
 
     window_action._add_dimension(dim, range.name)
-    return window_action
+    if not batched:
+        return window_action
+    # If batched, add additional node for setting window operation metadata. Doing this in a separate tasks
+    # allows batched operations for overlapping windows to be identified and only computed once
+    return window_action.map(
+        fluent.Payload(
+            backends.set_metadata, [fluent.Node.input_name(0), window_metadata]
+        )
+    )
 
 
 def _attribution_transform(action, config, scenario):
@@ -491,9 +564,6 @@ def _attribution_transform(action, config, scenario):
     attr = action.reduce(payload)
     attr._add_dimension("scenario", scenario)
     return attr
-
-
-from .backends.fieldlist import NumpyFieldListBackend
 
 
 class PProcFluent(fluent.Fluent):
@@ -507,7 +577,7 @@ class PProcFluent(fluent.Fluent):
         self,
         requests: list[Request | MultiSourceRequest],
         join_key: str = "",
-        backend=NumpyFieldListBackend,
+        backend=fieldlist.NumpyFieldListBackend,
         **kwargs,
     ):
         all_actions = None

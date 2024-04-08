@@ -1,19 +1,19 @@
 import pytest
 import numpy.random as random
+import dill
+import datetime
 
 from earthkit.data import FieldList
 from earthkit.data.core.metadata import RawMetadata
 
 from ppcascade import backends
+from ppcascade.backends.fieldlist import NumpyFieldListBackend
 from generic_tests import *
 
 
 class MockMetaData(RawMetadata):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-    def buffer_to_metadata(self) -> "MockMetaData":
-        return self
 
 
 def random_fieldlist(*shape) -> FieldList:
@@ -112,3 +112,33 @@ def test_take(input_generator, values, args, kwargs, output_shape):
     input = input_generator(3, 2, 3)
     output = backends.take(input, *args, **kwargs)
     assert values(output).shape == output_shape
+
+
+def test_serialisation(tmpdir):
+    yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
+    data = NumpyFieldListBackend.retrieve(
+        {
+            "class": "od",
+            "date": yesterday.strftime("%Y%m%d"),
+            "domain": "g",
+            "expver": "0001",
+            "levtype": "sfc",
+            "param": "167",
+            "stream": "enfo",
+            "time": "12",
+            "type": "cf",
+            "source": "mars",
+            "step": 36,
+        },
+        stream=True,
+    )
+    dill.dump(data, open(tmpdir / "data.pkl", "wb"))
+    deserialized = dill.load(open(tmpdir / "data.pkl", "rb"))
+    assert (
+        data[0].metadata()._handle.get_buffer()
+        == deserialized[0].metadata()._handle.get_buffer()
+    )
+
+    x = NumpyFieldListBackend.set_metadata(data, {"stepType": "max"})
+    dill.dump(x, open(tmpdir / "modified_data.pkl", "wb"))
+    dill.load(open(tmpdir / "modified_data.pkl", "rb"))
