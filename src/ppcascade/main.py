@@ -7,6 +7,7 @@ import dill
 from meters import ResourceMeter
 from cascade.cascade import Cascade
 from cascade.executors.dask import DaskLocalExecutor, DaskClientExecutor
+from cascade.executors.processpool import ProcessPoolExecutor
 from cascade.schedulers.depthfirst import DepthFirstScheduler
 from cascade.contextgraph import ContextGraph
 from cascade.graph import Graph, deduplicate_nodes, pyvis
@@ -84,22 +85,29 @@ def benchmark(graph: Graph, output_root: str, b_options: str) -> dict:
     options = parse_options(b_options)
     with ResourceMeter("BENCHMARK"):
         if options["type"] == "local":
-            resource_map = DaskLocalExecutor().benchmark(
-                graph,
+            resource_map = DaskLocalExecutor(
                 n_workers=int(options["workers"]),
+                threads_per_worker=int(options.get("threads_per_worker", 1)),
                 memory_limit=f"{options['memory']}MB",
-                adaptive=False,
+                adaptive_kwargs=parse_options(options.get("adaptive", "")),
+            ).benchmark(
+                graph,
                 report=f"{output_root}/dask_benchmark_report.html",
                 mem_report=f"{output_root}/mem_usage.csv",
             )
         elif options["type"] == "client":
-            resource_map = DaskClientExecutor().benchmark(
-                graph,
+            resource_map = DaskClientExecutor(
                 options["scheduler_file"],
-                options["mem_report"],
                 adaptive=False,
+            ).benchmark(
+                graph,
                 report=f"{output_root}/dask_benchmark_report.html",
+                mem_report=options["mem_report"],
             )
+        elif options["type"] == "processpool":
+            resource_map = ProcessPoolExecutor(
+                n_workers=int(options["workers"])
+            ).benchmark(graph)
         else:
             raise ValueError(
                 f"Unknown benchmark type {b_options['type']}. Expected one of local, client"
@@ -141,21 +149,25 @@ def execute(graph: Graph, output_root: str, e_options: str):
     os.environ["DASK_LOGGING__DISTRIBUTED"] = "debug"
     with ResourceMeter("EXECUTE"):
         if options["type"] == "local":
-            DaskLocalExecutor().execute(
-                graph,
+            DaskLocalExecutor(
                 n_workers=int(options["workers"]),
                 threads_per_worker=int(options.get("threads_per_worker", 1)),
                 memory_limit=f"{options['memory']}MB",
                 adaptive_kwargs=parse_options(options.get("adaptive", "")),
+            ).execute(
+                graph,
                 report=f"{output_root}/dask_execution_report.html",
             )
         elif options["type"] == "client":
-            DaskClientExecutor().execute(
-                graph,
+            DaskClientExecutor(
                 options["scheduler_file"],
                 bool(options.get("adaptive", False)),
+            ).execute(
+                graph,
                 report=f"{output_root}/dask_execution_report.html",
             )
+        elif options["type"] == "processpool":
+            ProcessPoolExecutor(n_workers=int(options["workers"])).execute(graph)
         else:
             raise ValueError(
                 f"Unknown executor type {options['type']}. Expected one of local, client"

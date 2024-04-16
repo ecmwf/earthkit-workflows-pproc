@@ -442,12 +442,13 @@ class NumpyFieldListBackend:
         return (metadata, scdata, anom, cluster_att, min_dist)
 
     def retrieve(request: dict | list[dict], **kwargs):
-        res = ek_retrieve(request, **kwargs)
-        ret = FieldList.from_numpy(
-            np.asarray(res.values),
-            [GribMetadata(metadata._handle) for metadata in res.metadata()],
-        )
-        return ret
+        with ResourceMeter(f"RETRIEVE {request}, {kwargs}"):
+            res = ek_retrieve(request, **kwargs)
+            ret = FieldList.from_numpy(
+                np.asarray(res.values),
+                [GribMetadata(metadata._handle) for metadata in res.metadata()],
+            )
+            return ret
 
     def set_metadata(data: NumpyFieldList, metadata: dict) -> NumpyFieldList:
         return new_fieldlist(data.values, data.metadata(), metadata)

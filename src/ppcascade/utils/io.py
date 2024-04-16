@@ -1,6 +1,5 @@
 from io import BytesIO
 import shutil
-from meters import ResourceMeter
 
 import mir
 from pproc.common.io import split_location
@@ -99,12 +98,11 @@ def file_retrieve(path: str, request: dict) -> Source:
 
 
 def retrieve(request: dict | list[dict], **kwargs):
-    with ResourceMeter(f"RETRIEVE {request}, {kwargs}"):
-        if isinstance(request, dict):
-            func = retrieve_single_source
-        else:
-            func = retrieve_multi_sources
-        return func(request, **kwargs)
+    if isinstance(request, dict):
+        func = retrieve_single_source
+    else:
+        func = retrieve_multi_sources
+    return func(request, **kwargs)
 
 
 def retrieve_multi_sources(requests: list[dict], **kwargs) -> NumpyFieldList:
