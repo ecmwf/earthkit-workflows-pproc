@@ -11,9 +11,9 @@ def window(operation: str, range: Range) -> dict:
     if len(range.steps) == 1:
         return {}
 
-    ret = {"stepRange": range.name}
+    ret = {}
     if operation == "diff":
-        ret.update({"stepType": "diff", "timeRangeIndicator": 5})
+        ret.update({"timeRangeIndicator": 5, "stepType": "diff"})
     if operation == "mean":
         ret["timeRangeIndicator"] = 3
         ret["numberIncludedInAverage"] = len(range.steps)
@@ -21,6 +21,7 @@ def window(operation: str, range: Range) -> dict:
     if operation in ["min", "max"]:
         ret["timeRangeIndicator"] = 2
     ret.setdefault("stepType", "max")
+    ret["stepRange"] = range.name
     return ret
 
 
