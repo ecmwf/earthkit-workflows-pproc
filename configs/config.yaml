@@ -15,10 +15,14 @@ common:
       ens: {}
 params:  
   207:
+    param:
+      id: 207
     grib_set:
       indicatorOfParameter: 207
       gribTablesVersionNo: 128
   228249:
+    param:
+      id: 228249
     grib_set:
       indicatorOfParameter: 249
       gribTablesVersionNo: 228
@@ -1066,11 +1070,12 @@ products:
         param:
           id: 229
         sources:
-          clim:
-            fdb:
+          fdb:
+            clim:
               param: 140200
               stream: wehs
-            mars:
+          mars:
+            clim:
               param: 140200
               stream: wehs
         grib_set:
@@ -1146,13 +1151,13 @@ products:
             clim: 
               param: 59
         grib_set:
-          edition: 1
-          gribTablesVersionNo: 132
-          indicatorOfParameter: 59
-          indicatorOfTypeOfLevel: 1
-          localDefinitionNumber: 19
-          timeRangeIndicator: 2
           typeOfStatisticalProcessing: 1  
+          edition: 1
+          indicatorOfTypeOfLevel: 1
+          timeRangeIndicator: 2
+          indicatorOfParameter: 59
+          gribTablesVersionNo: 132
+          localDefinitionNumber: 19
         windows:
           operation: max
       132044:

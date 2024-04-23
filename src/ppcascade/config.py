@@ -145,11 +145,13 @@ class Config(BaseConfig):
         super().__init__(args)
 
         if isinstance(self.options["members"], dict):
-            members = range(
-                self.options["members"]["start"], self.options["members"]["end"] + 1
+            members = list(
+                range(
+                    self.options["members"]["start"], self.options["members"]["end"] + 1
+                )
             )
         else:
-            members = range(1, int(self.options["members"]) + 1)
+            members = list(range(1, int(self.options["members"]) + 1))
         out_keys = self.options.pop("out_keys", {})
         in_keys = self.options.pop("in_keys", {})
         self.parameters = [

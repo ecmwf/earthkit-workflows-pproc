@@ -7,6 +7,11 @@ from earthkit.data.sources.stream import StreamSource
 from earthkit.data.sources.file import FileSource
 from earthkit.data.sources import Source, from_source
 from earthkit.data.sources.numpy_list import NumpyFieldList
+from earthkit.data import settings
+
+# Set cache policy to "temporary" to avoid "database is locked" errors when
+# for wind when executing across multiple workers
+settings.set("cache-policy", "temporary")
 
 
 def _source_from_location(loc, sources) -> tuple[str, list[dict]]:
@@ -128,7 +133,7 @@ def retrieve_single_source(request: dict, **kwargs) -> NumpyFieldList:
         path = req.pop("location")
         ret_sources = file_retrieve(path, req)
     else:
-        raise NotImplementedError("Source {source} not supported.")
+        raise NotImplementedError(f"Source {source} not supported.")
     assert (
         len(ret_sources) > 0
     ), f"No data retrieved from {source} for request {request}"

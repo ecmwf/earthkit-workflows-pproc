@@ -96,19 +96,22 @@ class ProductConfig:
         self.parameters.append(config)
 
     def _create_sources(self, param_id: str, sources: dict, base_request: dict):
+        params = (
+            list(map(str, param_id)) if isinstance(param_id, list) else str(param_id)
+        )
         for src, values in sources.items():
             src_keys = {"domain": "g"} if src == "fdb" else {}
             for param_type, param_keys in values.items():
                 if isinstance(param_keys, dict):
                     sources[src][param_type] = {
                         **base_request,
-                        "param": str(param_id),
+                        "param": params,
                         **param_keys,
                         **src_keys,
                     }
                 else:
                     sources[src][param_type] = [
-                        {**base_request, "param": str(param_id), **x, **src_keys}
+                        {**base_request, "param": params, **x, **src_keys}
                         for x in sources[src][param_type]
                     ]
         return sources
