@@ -3,7 +3,7 @@ import argparse
 from cascade.graph import Graph, deduplicate_nodes
 from cascade.fluent import Payload
 
-from .fluent import PProcFluent
+from .fluent import from_source
 from .utils import grib
 from .config import (
     Config,
@@ -30,10 +30,9 @@ def ensemble_anomaly(args: argparse.Namespace, deduplicate: bool = True):
     """
     config = Config(args)
     total_graph = Graph([])
-    fluent = PProcFluent()
     ensemble_dim = "type"
     for param_config in config.parameters:
-        climatology = fluent.source(
+        climatology = from_source(
             param_config.clim_request(args.climatology), join_key="step"
         )  # Will contain type em and es
         clim_headers = climatology.select({"type": "em"}, drop=True).map(
@@ -41,7 +40,7 @@ def ensemble_anomaly(args: argparse.Namespace, deduplicate: bool = True):
         )
 
         total_graph += (
-            fluent.source(
+            from_source(
                 param_config.forecast_request(args.forecast, no_expand=("number",)),
                 stream=True,
                 join_key=ensemble_dim,
@@ -104,8 +103,7 @@ def ensemble(args: argparse.Namespace, deduplicate: bool = True):
         if isinstance(requests, tuple):
             requests, stream = requests
         total_graph += (
-            PProcFluent()
-            .source(requests, stream=stream, join_key=ensemble_dim)
+            from_source(requests, stream=stream, join_key=ensemble_dim)
             .concatenate(dim=ensemble_dim, keep_dim=True)
             .param_operation(
                 param_config.param["operation"], **param_config.param["kwargs"]
@@ -151,9 +149,8 @@ def extreme(args: argparse.Namespace, deduplicate: bool = True):
     """
     config = Config(args)
     total_graph = Graph([])
-    fluent = PProcFluent()
     for param_config in config.parameters:
-        climatology = fluent.source(
+        climatology = from_source(
             param_config.clim_request(args.climatology, True, no_expand=("quantile"))
         )
         ensemble_dim = "type"
@@ -165,7 +162,7 @@ def extreme(args: argparse.Namespace, deduplicate: bool = True):
                 param_config.ensemble["kwargs"]["efi_control"] = None
 
         total_graph += (
-            fluent.source(
+            from_source(
                 param_config.forecast_request(args.forecast, no_expand=("number",)),
                 stream=True,
                 join_key=ensemble_dim,
@@ -227,17 +224,16 @@ def clustereps(args: argparse.Namespace, deduplicate: bool = True) -> Graph:
     Graph
     """
     config = ClusterConfig(args)
-    fluent = PProcFluent()
     if args.spread is not None:
-        spread = fluent.source(config.spread_request(args.spread, no_expand=("step",)))
+        spread = from_source(config.spread_request(args.spread, no_expand=("step",)))
     else:
-        spread = fluent.source(
+        spread = from_source(
             config.spread_compute_request(args.spread_compute, no_expand=("step",)),
             join_key="date",
         ).mean(dim="date")
 
     pca = (
-        fluent.source(
+        from_source(
             config.forecast_request(args.ensemble, no_expand="step"), join_key="number"
         )
         .concatenate(dim="number")
@@ -260,6 +256,3 @@ def clustereps(args: argparse.Namespace, deduplicate: bool = True) -> Graph:
     if deduplicate:
         return deduplicate_nodes(total_graph)
     return total_graph
-
-
-GRAPHS = [ensemble_anomaly, ensemble, extreme, clustereps]

@@ -430,22 +430,15 @@ class Action(fluent.Action):
                 ),
                 dim="**datatype**",
             )
-            res.sinks = list(res.nodes.data.flatten())
             return res
 
-        it = np.nditer(self.nodes, flags=["refs_ok"])
-        for node in it:
-            self.sinks.append(
-                fluent.Node(
-                    fluent.Payload(
-                        backends.write,
-                        (fluent.Node.input_name(0), target),
-                        {"metadata": metadata},
-                    ),
-                    node[()],
-                )
+        return self.map(
+            fluent.Payload(
+                backends.write,
+                (fluent.Node.input_name(0), target),
+                {"metadata": metadata},
             )
-        return self
+        )
 
 
 def _sot_transform(
@@ -566,41 +559,34 @@ def _attribution_transform(action, config, scenario):
     return attr
 
 
-class PProcFluent(fluent.Fluent):
-    def __init__(
-        self,
-        action=Action,
-    ):
-        super().__init__(action)
-
-    def source(
-        self,
-        requests: list[Request | MultiSourceRequest],
-        join_key: str = "",
-        backend=fieldlist.NumpyFieldListBackend,
-        **kwargs,
-    ):
-        all_actions = None
-        for request in requests:
-            payloads = np.empty(tuple(request.dims.values()), dtype=object)
-            for indices, new_request in request.expand():
-                payloads[indices] = (new_request,)
-            new_action = super().source(
-                backend.retrieve,
-                xr.DataArray(
-                    payloads,
-                    coords={key: list(request[key]) for key in request.dims.keys()},
-                ),
-                kwargs,
+def from_source(
+    requests: list[dict | Request | MultiSourceRequest],
+    join_key: str = "",
+    backend=fieldlist.NumpyFieldListBackend,
+    **kwargs,
+):
+    all_actions = None
+    for request in requests:
+        if isinstance(request, dict):
+            request = Request(request)
+        payloads = np.empty(tuple(request.dims.values()), dtype=object)
+        for indices, new_request in request.expand():
+            payloads[indices] = functools.partial(
+                backend.retrieve, new_request, **kwargs
             )
+        new_action = fluent.from_source(
+            payloads,
+            coords={key: list(request[key]) for key in request.dims.keys()},
+            action=Action,
+        )
 
-            if len(join_key) != 0 and join_key not in new_action.nodes.coords:
-                new_action._add_dimension(join_key, request[join_key])
+        if len(join_key) != 0 and join_key not in new_action.nodes.coords:
+            new_action._add_dimension(join_key, request[join_key])
 
-            if all_actions is None:
-                all_actions = new_action
-            else:
-                if len(join_key) == 0:
-                    raise ValueError("Join key must be specified for multiple requests")
-                all_actions = all_actions.join(new_action, join_key)
-        return all_actions
+        if all_actions is None:
+            all_actions = new_action
+        else:
+            if len(join_key) == 0:
+                raise ValueError("Join key must be specified for multiple requests")
+            all_actions = all_actions.join(new_action, join_key)
+    return all_actions
