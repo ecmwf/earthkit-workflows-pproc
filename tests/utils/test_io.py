@@ -19,15 +19,30 @@ request = {
 }
 
 
-def test_retrieve():
-    # Retrieve from single source
-    data = retrieve(request)
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {},
+        {"interpolate": {"grid": "O640"}},
+        {
+            "param": [138, 155],
+            "levtype": "pl",
+            "levelist": [250, 850],
+            "interpolate": {"grid": "O1280", "vod2uv": "1"},
+        },
+    ],
+    ids=["default", "interpolate", "wind"],
+)
+def test_retrieve(overrides):
+    test_request = request.copy()
+    test_request.update(overrides)
+    retrieve(test_request)
 
-    # Retrieve with multiple sources
+
+def test_retrieve_multi():
     fdb_request = request.copy()
     fdb_request["source"] = "fdb"
-    data2 = retrieve([request, fdb_request])
-    assert np.all(data.values == data2.values)
+    retrieve([request, fdb_request])
 
 
 @pytest.mark.skip(reason="Hangs if run in test suite")

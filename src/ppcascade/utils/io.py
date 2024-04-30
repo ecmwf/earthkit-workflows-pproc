@@ -42,16 +42,22 @@ def mir_job(
 
 def fdb_retrieve(request: dict, *, stream: bool = True) -> Source:
     mir_options = request.pop("interpolate", None)
-    if mir_options:
-        reader = from_source("fdb", request, stream=stream)
-        if stream:
-            ds = mir_job(reader._stream, mir_options)
-        else:
-            size = len(request["param"]) if isinstance(request["param"], list) else 1
-            inp = mir.MultiDimensionalGribFileInput(reader.path, size)
-            ds = mir_job(inp, mir_options)
-        return ds
-    return from_source("fdb", request, batch_size=0, stream=stream)
+    if mir_options is None:
+        return from_source("fdb", request, batch_size=0, stream=stream)
+
+    reader = from_source("fdb", request, stream=stream)
+    if stream:
+        if mir_options.get("vod2uv", "0") == "1":
+            raise ValueError("Wind vod2uv not supported for stream=True")
+        return mir_job(reader._stream, mir_options)
+
+    if mir_options.get("vod2uv", "0") == "1":
+        if len(request["param"]) != 2:
+            raise ValueError("Wind vod2uv requires two parameters")
+        inp = mir.MultiDimensionalGribFileInput(reader.path, 2)
+    else:
+        inp = mir.GribFileInput(reader.path)
+    return mir_job(inp, mir_options)
 
 
 def mars_retrieve(request: dict) -> Source:
@@ -59,11 +65,16 @@ def mars_retrieve(request: dict) -> Source:
     cache = request.pop("cache", None)
     cache_path = None if cache is None else cache.format_map(request)
     ds = from_source("mars", request)
-    if mir_options:
-        size = len(request["param"]) if isinstance(request["param"], list) else 1
-        inp = mir.MultiDimensionalGribFileInput(ds.path, size)
-        ds = mir_job(inp, mir_options, cache_path)
-    return ds
+    if mir_options is None:
+        return ds
+
+    if mir_options.get("vod2uv", "0") == "1":
+        if len(request["param"]) != 2:
+            raise ValueError("Wind vod2uv requires two parameters")
+        inp = mir.MultiDimensionalGribFileInput(ds.path, 2)
+    else:
+        inp = mir.GribFileInput(ds.path)
+    return mir_job(inp, mir_options, cache_path)
 
 
 def _transform_steps(steps, step_type: type = str):
@@ -88,7 +99,7 @@ def _transform_request(request: dict, step_type: type = str):
 
 def file_retrieve(path: str, request: dict) -> Source:
     mir_options = request.pop("interpolate", None)
-    if mir_options:
+    if mir_options is not None:
         raise NotImplementedError()
     location = path.format_map(request)
     file_ds = from_source("file", location)
