@@ -42,8 +42,8 @@ def ensemble_anomaly(args: argparse.Namespace, deduplicate: bool = True):
         total_graph += (
             from_source(
                 param_config.forecast_request(args.forecast, no_expand=("number",)),
-                stream=True,
                 join_key=ensemble_dim,
+                backend_kwargs={"stream": True},
             )
             .concatenate(dim=ensemble_dim, keep_dim=True)
             .param_operation(
@@ -103,7 +103,7 @@ def ensemble(args: argparse.Namespace, deduplicate: bool = True):
         if isinstance(requests, tuple):
             requests, stream = requests
         total_graph += (
-            from_source(requests, stream=stream, join_key=ensemble_dim)
+            from_source(requests, join_key=ensemble_dim, backend_kwargs={"stream": stream})
             .concatenate(dim=ensemble_dim, keep_dim=True)
             .param_operation(
                 param_config.param["operation"], **param_config.param["kwargs"]
@@ -164,8 +164,8 @@ def extreme(args: argparse.Namespace, deduplicate: bool = True):
         total_graph += (
             from_source(
                 param_config.forecast_request(args.forecast, no_expand=("number",)),
-                stream=True,
                 join_key=ensemble_dim,
+                backend_kwargs={"stream": True},
             )
             .param_operation(
                 param_config.param["operation"], **param_config.param["kwargs"]

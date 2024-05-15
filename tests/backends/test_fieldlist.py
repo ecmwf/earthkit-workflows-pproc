@@ -131,7 +131,7 @@ def test_serialisation(tmpdir):
             "source": "mars",
             "step": 36,
         },
-        stream=True,
+        backend_kwargs={"stream": True},
     )
     dill.dump(data, open(tmpdir / "data.pkl", "wb"))
     deserialized = dill.load(open(tmpdir / "data.pkl", "rb"))

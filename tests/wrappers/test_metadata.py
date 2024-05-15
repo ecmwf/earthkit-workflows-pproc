@@ -20,7 +20,7 @@ def test_serialisation(tmpdir):
             "source": "mars",
             "step": 36,
         },
-        stream=True,
+        backend_kwargs={"stream": True},
     )
     metadata = data[0].metadata()
 

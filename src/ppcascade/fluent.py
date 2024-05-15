@@ -673,7 +673,7 @@ def from_source(
     requests: list[dict | Request | MultiSourceRequest],
     join_key: str = "",
     backend=fieldlist.ArrayFieldListBackend,
-    **kwargs,
+    backend_kwargs: dict = {},
 ):
     all_actions = None
     for request in requests:
@@ -682,7 +682,7 @@ def from_source(
         payloads = np.empty(tuple(request.dims.values()), dtype=object)
         for indices, new_request in request.expand():
             payloads[indices] = functools.partial(
-                backend.retrieve, new_request, **kwargs
+                backend.retrieve, new_request, **backend_kwargs
             )
         new_action = fluent.from_source(
             payloads,
