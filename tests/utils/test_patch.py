@@ -2,7 +2,7 @@ import xarray as xr
 import numpy as np
 import pytest
 
-from meteokit import extreme
+from earthkit.meteo.extreme import array as extreme
 
 from ppcascade.utils.patch import PatchModule
 

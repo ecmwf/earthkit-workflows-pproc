@@ -103,7 +103,9 @@ def ensemble(args: argparse.Namespace, deduplicate: bool = True):
         if isinstance(requests, tuple):
             requests, stream = requests
         total_graph += (
-            from_source(requests, join_key=ensemble_dim, backend_kwargs={"stream": stream})
+            from_source(
+                requests, join_key=ensemble_dim, backend_kwargs={"stream": stream}
+            )
             .concatenate(dim=ensemble_dim, keep_dim=True)
             .param_operation(
                 param_config.param["operation"], **param_config.param["kwargs"]

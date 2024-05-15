@@ -13,13 +13,16 @@ class GribMetadata(metadata.GribMetadata):
             handle.set_array("values", handle.get_array("values").shape)
         super().__init__(handle)
 
-    def __getstate__(self) -> bytes:
-        return self._handle.get_buffer()
+    def __getstate__(self) -> dict:
+        ret = self.__dict__.copy()
+        ret["_handle"] = self._handle.get_buffer()
+        return ret
 
-    def __setstate__(self, state: bytes):
-        self._handle = codes.GribCodesHandle(
-            memory.GribMessageMemoryReader(state)._next_handle(), None, None
+    def __setstate__(self, state: dict):
+        state["_handle"] = codes.GribCodesHandle(
+            memory.GribMessageMemoryReader(state["_handle"])._next_handle(), None, None
         )
+        self.__dict__.update(state)
 
     def override(self, *args, **kwargs) -> "GribMetadata":
         ret = super().override(*args, **kwargs)

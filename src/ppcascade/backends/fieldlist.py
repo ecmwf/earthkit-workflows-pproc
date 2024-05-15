@@ -6,8 +6,6 @@ from typing import TypeAlias
 
 from earthkit.meteo.extreme import array as extreme
 from earthkit.meteo.stats import array as stats
-from earthkit.data import FieldList
-from earthkit.data.sources.array_list import ArrayFieldList
 from pproc.common.io import (
     target_from_location,
     write_grib,
@@ -26,6 +24,7 @@ from ppcascade.utils.patch import PatchModule
 from ppcascade.utils.io import retrieve as ek_retrieve
 from ppcascade.utils import grib
 from ppcascade.wrappers.metadata import GribMetadata
+from ppcascade.wrappers.array_list import ArrayFieldList
 
 
 def standardise_output(data):
@@ -59,11 +58,25 @@ def resolve_metadata(metadata: Metadata, *args) -> dict:
 
 def new_fieldlist(data, metadata: list[GribMetadata], overrides: dict):
     if len(overrides) > 0:
-        metadata = [metadata[x].override(overrides) for x in range(len(metadata))]
-    return FieldList.from_numpy(
-        standardise_output(data),
-        metadata,
-    )
+        try:
+            new_metadata = [
+                metadata[x].override(overrides) for x in range(len(metadata))
+            ]
+            return ArrayFieldList(
+                standardise_output(data),
+                new_metadata,
+            )
+        except Exception as e:
+            print(
+                "Error setting metadata",
+                overrides,
+                "edition",
+                metadata[0]["edition"],
+                "param",
+                metadata[0]["paramId"],
+            )
+            print(e)
+    return ArrayFieldList(standardise_output(data), metadata)
 
 
 class ArrayFieldListBackend:
@@ -98,9 +111,11 @@ class ArrayFieldListBackend:
     ) -> ArrayFieldList:
         with ResourceMeter(func.upper()):
             # First argument must be FieldList
-            assert isinstance(arrays[0], FieldList)
+            assert isinstance(
+                arrays[0], ArrayFieldList
+            ), f"Expected ArrayFieldList type, got {type(arrays[0])}"
             val1 = arrays[0].values
-            if isinstance(arrays[1], FieldList):
+            if isinstance(arrays[1], ArrayFieldList):
                 val2 = arrays[1].values
                 metadata = resolve_metadata(metadata, *arrays)
                 xp = array_api_compat.array_namespace(val1, val2)
@@ -210,7 +225,8 @@ class ArrayFieldListBackend:
         ArrayFieldList
             Contains all fields inside the input field lists
         """
-        return sum(arrays[1:], arrays[0])
+        ret = sum(arrays[1:], arrays[0])
+        return ArrayFieldList(ret.values, ret.metadata())
 
     def take(array: ArrayFieldList, indices: int | tuple, *, axis: int):
         if axis != 0:
@@ -290,7 +306,9 @@ class ArrayFieldListBackend:
         with ResourceMeter("QUANTILES"):
             xp = array_api_compat.array_namespace(ens.values)
             with PatchModule(stats, "numpy", xp):
-                res = list(stats.iter_quantiles(ens.values, [quantile], method="numpy"))[0]
+                res = list(
+                    stats.iter_quantiles(ens.values, [quantile], method="numpy")
+                )[0]
             return new_fieldlist(
                 res,
                 [ens[0].metadata()],
@@ -444,8 +462,8 @@ class ArrayFieldListBackend:
     def retrieve(request: dict | list[dict], **kwargs):
         with ResourceMeter(f"RETRIEVE {request}, {kwargs}"):
             res = ek_retrieve(request, **kwargs)
-            ret = FieldList.from_array(
-                res.to_array(),
+            ret = ArrayFieldList(
+                res.values,
                 [GribMetadata(metadata._handle) for metadata in res.metadata()],
             )
             return ret
