@@ -672,7 +672,7 @@ def _attribution_transform(action, config, scenario):
 def from_source(
     requests: list[dict | Request | MultiSourceRequest],
     join_key: str = "",
-    backend=fieldlist.NumpyFieldListBackend,
+    backend=fieldlist.ArrayFieldListBackend,
     **kwargs,
 ):
     all_actions = None

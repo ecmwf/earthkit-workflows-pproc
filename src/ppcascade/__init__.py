@@ -1,6 +1,6 @@
 from cascade.backends import register as register_backend
-from earthkit.data.sources.numpy_list import NumpyFieldList
+from earthkit.data.sources.array_list import ArrayFieldList
 
-from .backends.fieldlist import NumpyFieldListBackend
+from .backends.fieldlist import ArrayFieldListBackend
 
-register_backend(NumpyFieldList, NumpyFieldListBackend)
+register_backend(ArrayFieldList, ArrayFieldListBackend)

@@ -7,7 +7,7 @@ from typing import TypeAlias
 from meteokit import extreme
 from meteokit.stats import iter_quantiles
 from earthkit.data import FieldList
-from earthkit.data.sources.numpy_list import NumpyFieldList
+from earthkit.data.sources.array_list import ArrayFieldList
 from pproc.common.io import (
     target_from_location,
     write_grib,
@@ -66,8 +66,8 @@ def new_fieldlist(data, metadata: list[GribMetadata], overrides: dict):
     )
 
 
-class NumpyFieldListBackend:
-    def _merge(*fieldlists: list[NumpyFieldList]):
+class ArrayFieldListBackend:
+    def _merge(*fieldlists: list[ArrayFieldList]):
         """
         Merge fieldlist elements into a single array. fieldlists with
         different number of fields must be concatenated, otherwise, the
@@ -81,10 +81,10 @@ class NumpyFieldListBackend:
         return xp.asarray(values)
 
     def multi_arg_function(
-        func: str, *arrays: list[NumpyFieldList], metadata: Metadata = None
-    ) -> NumpyFieldList:
+        func: str, *arrays: list[ArrayFieldList], metadata: Metadata = None
+    ) -> ArrayFieldList:
         with ResourceMeter(func.upper()):
-            merged_array = NumpyFieldListBackend._merge(*arrays)
+            merged_array = ArrayFieldListBackend._merge(*arrays)
             xp = array_api_compat.array_namespace(*merged_array)
             res = standardise_output(getattr(xp, func)(merged_array, axis=0))
             return new_fieldlist(
@@ -94,8 +94,8 @@ class NumpyFieldListBackend:
             )
 
     def two_arg_function(
-        func: str, *arrays: NumpyFieldList, metadata: Metadata = None
-    ) -> NumpyFieldList:
+        func: str, *arrays: ArrayFieldList, metadata: Metadata = None
+    ) -> ArrayFieldList:
         with ResourceMeter(func.upper()):
             # First argument must be FieldList
             assert isinstance(arrays[0], FieldList)
@@ -114,105 +114,105 @@ class NumpyFieldListBackend:
             )
 
     def mean(
-        *arrays: list[NumpyFieldList], metadata: Metadata = None
-    ) -> NumpyFieldList:
-        return NumpyFieldListBackend.multi_arg_function(
+        *arrays: list[ArrayFieldList], metadata: Metadata = None
+    ) -> ArrayFieldList:
+        return ArrayFieldListBackend.multi_arg_function(
             "mean", *arrays, metadata=metadata
         )
 
-    def std(*arrays: list[NumpyFieldList], metadata: Metadata = None) -> NumpyFieldList:
-        return NumpyFieldListBackend.multi_arg_function(
+    def std(*arrays: list[ArrayFieldList], metadata: Metadata = None) -> ArrayFieldList:
+        return ArrayFieldListBackend.multi_arg_function(
             "std", *arrays, metadata=metadata
         )
 
-    def min(*arrays: list[NumpyFieldList], metadata: Metadata = None) -> NumpyFieldList:
-        return NumpyFieldListBackend.multi_arg_function(
+    def min(*arrays: list[ArrayFieldList], metadata: Metadata = None) -> ArrayFieldList:
+        return ArrayFieldListBackend.multi_arg_function(
             "min", *arrays, metadata=metadata
         )
 
-    def max(*arrays: list[NumpyFieldList], metadata: Metadata = None) -> NumpyFieldList:
-        return NumpyFieldListBackend.multi_arg_function(
+    def max(*arrays: list[ArrayFieldList], metadata: Metadata = None) -> ArrayFieldList:
+        return ArrayFieldListBackend.multi_arg_function(
             "max", *arrays, metadata=metadata
         )
 
-    def sum(*arrays: list[NumpyFieldList], metadata: Metadata = None) -> NumpyFieldList:
-        return NumpyFieldListBackend.multi_arg_function(
+    def sum(*arrays: list[ArrayFieldList], metadata: Metadata = None) -> ArrayFieldList:
+        return ArrayFieldListBackend.multi_arg_function(
             "sum", *arrays, metadata=metadata
         )
 
     def prod(
-        *arrays: list[NumpyFieldList], metadata: Metadata = None
-    ) -> NumpyFieldList:
-        return NumpyFieldListBackend.multi_arg_function(
+        *arrays: list[ArrayFieldList], metadata: Metadata = None
+    ) -> ArrayFieldList:
+        return ArrayFieldListBackend.multi_arg_function(
             "prod", *arrays, metadata=metadata
         )
 
-    def var(*arrays: list[NumpyFieldList], metadata: Metadata = None) -> NumpyFieldList:
-        return NumpyFieldListBackend.multi_arg_function(
+    def var(*arrays: list[ArrayFieldList], metadata: Metadata = None) -> ArrayFieldList:
+        return ArrayFieldListBackend.multi_arg_function(
             "var", *arrays, metadata=metadata
         )
 
-    def stack(*arrays: list[NumpyFieldList], axis: int = 0) -> NumpyFieldList:
+    def stack(*arrays: list[ArrayFieldList], axis: int = 0) -> ArrayFieldList:
         if axis != 0:
             raise ValueError("Can not stack FieldList along axis != 0")
-        assert np.all(
+        assert all(
             [len(x) == 1 for x in arrays]
         ), "Can not stack FieldLists with more than one element, use concat"
-        return NumpyFieldListBackend.concat(*arrays)
+        return ArrayFieldListBackend.concat(*arrays)
 
-    def add(*arrays: list[NumpyFieldList], metadata: Metadata = None) -> NumpyFieldList:
-        return NumpyFieldListBackend.two_arg_function("add", *arrays, metadata=metadata)
+    def add(*arrays: list[ArrayFieldList], metadata: Metadata = None) -> ArrayFieldList:
+        return ArrayFieldListBackend.two_arg_function("add", *arrays, metadata=metadata)
 
     def subtract(
-        *arrays: list[NumpyFieldList], metadata: Metadata = None
-    ) -> NumpyFieldList:
-        return NumpyFieldListBackend.two_arg_function(
+        *arrays: list[ArrayFieldList], metadata: Metadata = None
+    ) -> ArrayFieldList:
+        return ArrayFieldListBackend.two_arg_function(
             "subtract", *arrays, metadata=metadata
         )
 
     @num_args(2)
     def diff(
-        *arrays: list[NumpyFieldList], metadata: Metadata = None
-    ) -> NumpyFieldList:
-        return NumpyFieldListBackend.multiply(
-            NumpyFieldListBackend.subtract(*arrays, metadata=metadata), -1
+        *arrays: list[ArrayFieldList], metadata: Metadata = None
+    ) -> ArrayFieldList:
+        return ArrayFieldListBackend.multiply(
+            ArrayFieldListBackend.subtract(*arrays, metadata=metadata), -1
         )
 
     def multiply(
-        *arrays: list[NumpyFieldList], metadata: Metadata = None
-    ) -> NumpyFieldList:
-        return NumpyFieldListBackend.two_arg_function(
+        *arrays: list[ArrayFieldList], metadata: Metadata = None
+    ) -> ArrayFieldList:
+        return ArrayFieldListBackend.two_arg_function(
             "multiply", *arrays, metadata=metadata
         )
 
     def divide(
-        *arrays: list[NumpyFieldList], metadata: Metadata = None
-    ) -> NumpyFieldList:
-        return NumpyFieldListBackend.two_arg_function(
+        *arrays: list[ArrayFieldList], metadata: Metadata = None
+    ) -> ArrayFieldList:
+        return ArrayFieldListBackend.two_arg_function(
             "divide", *arrays, metadata=metadata
         )
 
-    def pow(*arrays: list[NumpyFieldList], metadata: Metadata = None) -> NumpyFieldList:
-        return NumpyFieldListBackend.two_arg_function("pow", *arrays, metadata=metadata)
+    def pow(*arrays: list[ArrayFieldList], metadata: Metadata = None) -> ArrayFieldList:
+        return ArrayFieldListBackend.two_arg_function("pow", *arrays, metadata=metadata)
 
-    def concat(*arrays: list[NumpyFieldList]) -> NumpyFieldList:
+    def concat(*arrays: list[ArrayFieldList]) -> ArrayFieldList:
         """
-        Concatenates the list of fields inside each NumpyFieldList into a single
-        NumpyFieldList object
+        Concatenates the list of fields inside each ArrayFieldList into a single
+        ArrayFieldList object
 
         Parameters
         ----------
-        arrays: list[NumpyFieldList]
-            NumpyFieldList instances to whose fields are to be concatenated
+        arrays: list[ArrayFieldList]
+            ArrayFieldList instances to whose fields are to be concatenated
 
         Return
         ------
-        NumpyFieldList
+        ArrayFieldList
             Contains all fields inside the input field lists
         """
         return sum(arrays[1:], arrays[0])
 
-    def take(array: NumpyFieldList, indices: int | tuple, *, axis: int):
+    def take(array: ArrayFieldList, indices: int | tuple, *, axis: int):
         if axis != 0:
             raise ValueError("Can not take from FieldList along axis != 0")
         if isinstance(indices, int):
@@ -220,9 +220,9 @@ class NumpyFieldListBackend:
         return array[indices]
 
     def norm(
-        *arrays: list[NumpyFieldList], metadata: Metadata = None
-    ) -> NumpyFieldList:
-        merged_array = NumpyFieldListBackend._merge(*arrays)
+        *arrays: list[ArrayFieldList], metadata: Metadata = None
+    ) -> ArrayFieldList:
+        merged_array = ArrayFieldListBackend._merge(*arrays)
         xp = array_api_compat.array_namespace(merged_array)
         norm = standardise_output(xp.sqrt(xp.sum(xp.pow(merged_array, 2), axis=0)))
         return new_fieldlist(
@@ -232,27 +232,27 @@ class NumpyFieldListBackend:
         )
 
     def threshold(
-        arr: NumpyFieldList,
+        arr: ArrayFieldList,
         comparison: str,
         value: float,
         *,
         metadata: Metadata = None,
-    ) -> NumpyFieldList:
+    ) -> ArrayFieldList:
         with ResourceMeter("THRESHOLD"):
             xp = array_api_compat.array_namespace(arr.values)
-            # Find all locations where np.nan appears as an ensemble value
+            # Find all locations where nan appears as an ensemble value
             is_nan = xp.isnan(arr.values)
             thesh = comp_str2func(xp, comparison)(arr.values, value)
             res = xp.where(is_nan, xp.nan, thesh)
             return new_fieldlist(res, arr.metadata(), resolve_metadata(metadata, arr))
 
     def efi(
-        clim: NumpyFieldList,
-        ens: NumpyFieldList,
+        clim: ArrayFieldList,
+        ens: ArrayFieldList,
         eps: float,
         *,
         metadata: Metadata = None,
-    ) -> NumpyFieldList:
+    ) -> ArrayFieldList:
         with ResourceMeter(f"EFI, clim {clim.values.shape}, ens {ens.values.shape}"):
             xp = array_api_compat.array_namespace(ens.values, clim.values)
             with PatchModule(extreme, "numpy", xp):
@@ -264,13 +264,13 @@ class NumpyFieldListBackend:
             )
 
     def sot(
-        clim: NumpyFieldList,
-        ens: NumpyFieldList,
+        clim: ArrayFieldList,
+        ens: ArrayFieldList,
         number: int,
         eps: float,
         *,
         metadata: Metadata = None,
-    ) -> NumpyFieldList:
+    ) -> ArrayFieldList:
         with ResourceMeter("SOT"):
             xp = array_api_compat.array_namespace(ens.values, clim.values)
             with PatchModule(extreme, "numpy", xp):
@@ -285,8 +285,8 @@ class NumpyFieldListBackend:
             )
 
     def quantiles(
-        ens: NumpyFieldList, quantile: float, *, metadata: Metadata = None
-    ) -> NumpyFieldList:
+        ens: ArrayFieldList, quantile: float, *, metadata: Metadata = None
+    ) -> ArrayFieldList:
         with ResourceMeter("QUANTILES"):
             xp = array_api_compat.array_namespace(ens.values)
             with PatchModule(extreme, "numpy", xp):
@@ -298,14 +298,14 @@ class NumpyFieldListBackend:
             )
 
     def filter(
-        arr1: NumpyFieldList,
-        arr2: NumpyFieldList,
+        arr1: ArrayFieldList,
+        arr2: ArrayFieldList,
         comparison: str,
         threshold: float,
         *,
         replacement: float = 0,
         metadata: Metadata = None,
-    ) -> NumpyFieldList:
+    ) -> ArrayFieldList:
         with ResourceMeter("FILTER"):
             xp = array_api_compat.array_namespace(arr1.values, arr2.values)
             condition = comp_str2func(xp, comparison)(arr2.values, threshold)
@@ -316,15 +316,15 @@ class NumpyFieldListBackend:
 
     def pca(
         config,
-        ens: NumpyFieldList,
-        spread: NumpyFieldList,
+        ens: ArrayFieldList,
+        spread: ArrayFieldList,
         mask: np.ndarray,
         target: str,
     ):
         xp = array_api_compat.array_namespace(ens.values)
         lat_lon = ens.to_latlon(flatten=True)
         ens_data = xp.reshape(
-            ens.to_numpy(flatten=True),
+            ens.to_array(flatten=True),
             (config.num_members, len(config.steps), len(lat_lon["lat"])),
         )
         with ResourceMeter(
@@ -444,16 +444,16 @@ class NumpyFieldListBackend:
     def retrieve(request: dict | list[dict], **kwargs):
         with ResourceMeter(f"RETRIEVE {request}, {kwargs}"):
             res = ek_retrieve(request, **kwargs)
-            ret = FieldList.from_numpy(
-                np.asarray(res.values),
+            ret = FieldList.from_array(
+                res.to_array(),
                 [GribMetadata(metadata._handle) for metadata in res.metadata()],
             )
             return ret
 
-    def set_metadata(data: NumpyFieldList, metadata: dict) -> NumpyFieldList:
+    def set_metadata(data: ArrayFieldList, metadata: dict) -> ArrayFieldList:
         return new_fieldlist(data.values, data.metadata(), metadata)
 
-    def write(data: NumpyFieldList, loc, metadata: dict | None = None):
+    def write(data: ArrayFieldList, loc, metadata: dict | None = None):
         if loc == "null:":
             return
         target = target_from_location(loc)

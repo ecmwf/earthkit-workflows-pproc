@@ -6,7 +6,7 @@ from pproc.common.io import split_location
 from earthkit.data.sources.stream import StreamSource
 from earthkit.data.sources.file import FileSource
 from earthkit.data.sources import Source, from_source
-from earthkit.data.sources.numpy_list import NumpyFieldList
+from earthkit.data.sources.array_list import ArrayFieldList
 from earthkit.data import settings
 
 # Set cache policy to "temporary" to avoid "database is locked" errors when
@@ -121,7 +121,7 @@ def retrieve(request: dict | list[dict], **kwargs):
     return func(request, **kwargs)
 
 
-def retrieve_multi_sources(requests: list[dict], **kwargs) -> NumpyFieldList:
+def retrieve_multi_sources(requests: list[dict], **kwargs) -> ArrayFieldList:
     ret = None
     for req in requests:
         try:
@@ -133,7 +133,7 @@ def retrieve_multi_sources(requests: list[dict], **kwargs) -> NumpyFieldList:
     return ret
 
 
-def retrieve_single_source(request: dict, **kwargs) -> NumpyFieldList:
+def retrieve_single_source(request: dict, **kwargs) -> ArrayFieldList:
     req = request.copy()
     source = req.pop("source")
     if source == "fdb":

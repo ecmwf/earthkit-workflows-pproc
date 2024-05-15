@@ -8,7 +8,7 @@ version = "0.0.1"
 requires-python = ">=3.10"
 dependencies = [
     "eccodes",
-    "earthkit-data==0.4.0",
+    "earthkit-data==0.7.0",
     "filelock>=3.12.0",
     "numexpr",
     "dill",
@@ -23,7 +23,10 @@ dependencies = [
 
 [project.optional-dependencies]
 tests = ["pytest"]
-lint = ["black"]
+lint = ["black", "isort", "flake8"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.isort]
+profile = "black"

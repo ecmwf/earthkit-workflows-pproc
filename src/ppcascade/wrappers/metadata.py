@@ -24,3 +24,6 @@ class GribMetadata(metadata.GribMetadata):
     def override(self, *args, **kwargs) -> "GribMetadata":
         ret = super().override(*args, **kwargs)
         return GribMetadata(ret._handle, clear_data=False)
+
+    def _hide_internal_keys(self):
+        return self
