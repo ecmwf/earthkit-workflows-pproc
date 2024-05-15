@@ -9,6 +9,7 @@ requires-python = ">=3.10"
 dependencies = [
     "eccodes",
     "earthkit-data==0.7.0",
+    "earthkit-meteo>=0.1.0",
     "filelock>=3.12.0",
     "numexpr",
     "dill",
@@ -16,7 +17,6 @@ dependencies = [
     "scipy",
     "code-meters",
     "cascade-python @ git+ssh://git@github.com/ecmwf/cascade.git",
-    "meteokit @ git+ssh://git@git.ecmwf.int/ecsdk/meteokit.git",
     "pyfdb @ git+https://github.com/ecmwf/pyfdb.git@master",
     "pproc @ git+ssh://git@git.ecmwf.int/ecsdk/pproc.git"
 ]

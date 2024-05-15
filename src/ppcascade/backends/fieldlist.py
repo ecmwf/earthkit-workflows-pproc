@@ -4,8 +4,8 @@ from meters import ResourceMeter
 from os.path import join as pjoin
 from typing import TypeAlias
 
-from meteokit import extreme
-from meteokit.stats import iter_quantiles
+from earthkit.meteo.extreme import array as extreme
+from earthkit.meteo.stats import array as stats
 from earthkit.data import FieldList
 from earthkit.data.sources.array_list import ArrayFieldList
 from pproc.common.io import (
@@ -289,8 +289,8 @@ class ArrayFieldListBackend:
     ) -> ArrayFieldList:
         with ResourceMeter("QUANTILES"):
             xp = array_api_compat.array_namespace(ens.values)
-            with PatchModule(extreme, "numpy", xp):
-                res = list(iter_quantiles(ens.values, [quantile], method="numpy"))[0]
+            with PatchModule(stats, "numpy", xp):
+                res = list(stats.iter_quantiles(ens.values, [quantile], method="numpy"))[0]
             return new_fieldlist(
                 res,
                 [ens[0].metadata()],
