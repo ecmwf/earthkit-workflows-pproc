@@ -111,7 +111,13 @@ def main(sys_args):
         help="Schedule graph using DepthFirstScheduler. Default: False",
     )
     dask_group.add_argument(
-        "--execute-options",
+        "--execute",
+        action="store_true",
+        default=False,
+        help="Execute graph using configured executor. Default: False",
+    )
+    dask_group.add_argument(
+        "--executor-options",
         type=str,
         default="",
         help="Execute graph using either local or client Dask executor, memory in MB."
@@ -173,26 +179,29 @@ def main(sys_args):
     graph_parser.set_defaults(func=graph_from_serialisation)
 
     args = parser.parse_args(sys_args)
+
+    os.makedirs(args.output_root, exist_ok=True)
     cas = args.func(args)
     if len(args.plot) != 0:
         cas.visualise(args.plot)
     if len(args.serialise) != 0:
         cas.serialise(args.serialise)
 
-    options = parse_options(args.execute_options)
+    options = parse_options(args.executor_options)
     if len(options) > 0:
         cas.executor = create_executor(options)
         if args.benchmark:
             with ResourceMeter("BENCHMARK"):
-                cas.benchmark(f"{args.output_root}/memray")
+                cas.benchmark(f"{args.output_root}/profiling")
             if len(args.serialise) != 0:
                 cas.serialise(args.serialise)
         if args.schedule:
             with ResourceMeter("SCHEDULE"):
                 cas.schedule()
-        os.environ["DASK_LOGGING__DISTRIBUTED"] = "debug"
-        with ResourceMeter("EXECUTE"):
-            cas.execute()
+        if args.execute:
+            os.environ["DASK_LOGGING__DISTRIBUTED"] = "debug"
+            with ResourceMeter("EXECUTE"):
+                cas.execute()
 
 
 if __name__ == "__main__":

@@ -712,7 +712,7 @@ products:
           bitsPerValue: 24
           edition: 2
           typeOfGeneratingProcess: 5
-          paramId: 0
+          paramId: 133093
           timeIncrement: 12
           indicatorOfUnitForTimeIncrement: 1
           typeOfStatisticalProcessing: 10
@@ -753,7 +753,7 @@ products:
           bitsPerValue: 24
           edition: 2
           typeOfGeneratingProcess: 5
-          paramId: 0
+          paramId: 133094
           timeIncrement: 12
           indicatorOfUnitForTimeIncrement: 1
           typeOfStatisticalProcessing: 10
@@ -794,7 +794,7 @@ products:
           bitsPerValue: 24
           edition: 2
           typeOfGeneratingProcess: 5
-          paramId: 0
+          paramId: 133095
           timeIncrement: 12
           indicatorOfUnitForTimeIncrement: 1
           typeOfStatisticalProcessing: 10
@@ -835,7 +835,7 @@ products:
           bitsPerValue: 24
           edition: 2
           typeOfGeneratingProcess: 5
-          paramId: 0
+          paramId: 133096
           timeIncrement: 12
           indicatorOfUnitForTimeIncrement: 1
           typeOfStatisticalProcessing: 10
@@ -876,7 +876,7 @@ products:
           bitsPerValue: 24
           edition: 2
           typeOfGeneratingProcess: 5
-          paramId: 0
+          paramId: 133097
           timeIncrement: 12
           indicatorOfUnitForTimeIncrement: 1
           typeOfStatisticalProcessing: 10
@@ -917,7 +917,7 @@ products:
           bitsPerValue: 24
           edition: 2
           typeOfGeneratingProcess: 5
-          paramId: 0
+          paramId: 133098
           timeIncrement: 12
           indicatorOfUnitForTimeIncrement: 1
           typeOfStatisticalProcessing: 10

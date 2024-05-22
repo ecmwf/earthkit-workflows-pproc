@@ -130,7 +130,7 @@ class ProductConfig:
                 ]
             }
         )
-        yaml.dump(ret, open(filename, "w"))
+        yaml.dump(ret, open(filename, "w"), sort_keys=False)
 
 
 class ExtremeConfig(ProductConfig):
