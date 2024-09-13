@@ -5,7 +5,7 @@ from earthkit.data.readers.grib import memory
 from earthkit.data.readers.grib import codes
 
 
-class GribMetadata(metadata.GribMetadata):
+class StandAloneGribMetadata(metadata.StandAloneGribMetadata):
     def __init__(self, handle, clear_data: bool = True):
         if clear_data:
             # Clear data values, keeping only metadata
@@ -24,9 +24,9 @@ class GribMetadata(metadata.GribMetadata):
         )
         self.__dict__.update(state)
 
-    def override(self, *args, **kwargs) -> "GribMetadata":
+    def override(self, *args, **kwargs) -> "StandAloneGribMetadata":
         ret = super().override(*args, **kwargs)
-        return GribMetadata(ret._handle, clear_data=False)
+        return StandAloneGribMetadata(ret._handle, clear_data=False)
 
     def _hide_internal_keys(self):
         return self
