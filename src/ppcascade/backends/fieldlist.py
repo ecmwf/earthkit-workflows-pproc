@@ -233,7 +233,8 @@ class ArrayFieldListBackend:
             raise ValueError("Can not take from FieldList along axis != 0")
         if isinstance(indices, int):
             indices = [indices]
-        return array[indices]
+        ret = array[indices]
+        return ArrayFieldList(ret.values, ret.metadata())
 
     def norm(
         *arrays: list[ArrayFieldList], metadata: Metadata = None
