@@ -4,6 +4,7 @@ import functools
 import inspect
 
 from cascade import fluent
+from cascade.fluent import Coord
 from cascade import backends
 
 from .utils.window import Range
@@ -282,7 +283,7 @@ class Action(fluent.Action):
     def ensms(
         self,
         dim: str = "number",
-        new_dim: str | xr.DataArray = xr.DataArray(["mean", "std"], name="type"),
+        new_dim: str | Coord = ("type", ["mean", "std"]),
         batch_size: int = 0,
         metadata: dict | None = None,
     ):
@@ -295,7 +296,7 @@ class Action(fluent.Action):
         Parameters
         ----------
         dim: str, dimension to compute mean and standard deviation along
-        new_dim: str or xr.DataArray, name of new dimension or xr.DataArray specifying new dimension name and
+        new_dim: str or `Coord`, name of new dimension or `Coord` specifying new dimension name and
         coordinate values
         batch_size: int, size of batches to split reduction into. If 0,
         computation is not batched
