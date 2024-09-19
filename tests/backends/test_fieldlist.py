@@ -19,7 +19,7 @@ class MockMetaData(RawMetadata):
 
 def random_fieldlist(*shape) -> ArrayFieldList:
     return ArrayFieldList(
-        random.rand(*shape), [MockMetaData() for x in range(shape[0])]
+        random.rand(*shape), [MockMetaData(param=f"{x}") for x in range(shape[0])]
     )
 
 
@@ -62,7 +62,9 @@ def test_multi_arg(func, input_generator, values):
 
     # Field lists with multiple fields
     arr2 = [input_generator(3, 20) for _ in range(5)]
-    assert values(func(*arr2)).shape == (3, 20)
+    output = func(*arr2)
+    assert values(output).shape == (3, 20)
+    assert isinstance(output, ArrayFieldList)
 
 
 @pytest.mark.parametrize(
@@ -84,6 +86,7 @@ def test_two_arg(input_generator, values, func):
     arr = [input_generator(3, 5), 2]
     unnested = func(*arr)
     assert values(unnested).shape == (3, 5)
+    assert isinstance(unnested, ArrayFieldList)
 
     # Raises on too many arguments
     arr = [input_generator(1, 5) for _ in range(3)]
@@ -99,20 +102,24 @@ def test_concat(input_generator, values):
     assert len(res) == 3
     assert np.all(values(res[0]) == values(arr[0]))
     assert np.all(values(res[-1]) == values(arr[-1]))
+    assert isinstance(res, ArrayFieldList)
 
 
 @pytest.mark.parametrize(
     ["args", "kwargs", "output_shape"],
     [
-        [[0], {"axis": 0}, (1, 6)],
-        [[[0]], {"axis": 0}, (1, 6)],
-        [[[0, 1]], {"axis": 0}, (2, 6)],
+        [[0], {"dim": 0}, (1, 6)],
+        [[[0]], {"dim": 0}, (1, 6)],
+        [[[0, 1]], {"dim": 0}, (2, 6)],
+        [[0], {"dim": "param", "method": "isel"}, (1, 6)],
+        [[["0", "1"]], {"dim": "param", "method": "sel"}, (2, 6)],
     ],
 )
 def test_take(input_generator, values, args, kwargs, output_shape):
     input = input_generator(3, 6)
     output = backends.take(input, *args, **kwargs)
     assert values(output).shape == output_shape
+    assert isinstance(output, ArrayFieldList)
 
 
 def test_serialisation(tmpdir):
