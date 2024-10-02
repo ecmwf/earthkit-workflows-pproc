@@ -700,3 +700,6 @@ def from_source(
                 raise ValueError("Join key must be specified for multiple requests")
             all_actions = all_actions.join(new_action, join_key)
     return all_actions
+
+
+fluent.Action.register('pproc', Action)
