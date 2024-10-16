@@ -1,5 +1,4 @@
 import numpy as np
-import xarray as xr
 import functools
 import inspect
 
@@ -282,7 +281,7 @@ class Action(fluent.Action):
     def ensms(
         self,
         dim: str = "number",
-        new_dim: str | xr.DataArray = xr.DataArray(["mean", "std"], name="type"),
+        new_dim: str | tuple[str, list] = ("type", ["mean", "std"]),
         batch_size: int = 0,
         metadata: dict | None = None,
     ):
@@ -295,7 +294,7 @@ class Action(fluent.Action):
         Parameters
         ----------
         dim: str, dimension to compute mean and standard deviation along
-        new_dim: str or xr.DataArray, name of new dimension or xr.DataArray specifying new dimension name and
+        new_dim: str or tuple, name of new dimension or tuple specifying new dimension name and
         coordinate values
         batch_size: int, size of batches to split reduction into. If 0,
         computation is not batched

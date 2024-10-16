@@ -4,6 +4,8 @@ from meters import ResourceMeter
 from os.path import join as pjoin
 from typing import TypeAlias
 
+from earthkit.data.sources.array_list import ArrayFieldList
+from earthkit.data.readers.grib.metadata import StandAloneGribMetadata
 from earthkit.meteo.extreme import array as extreme
 from earthkit.meteo.stats import array as stats
 from pproc.common.io import (
@@ -12,7 +14,6 @@ from pproc.common.io import (
     FileTarget,
     FileSetTarget,
 )
-from pproc.common.resources import ResourceMeter
 from pproc import clustereps
 from pproc.clustereps.utils import normalise_angles
 from pproc.clustereps.io import read_steps_grib
@@ -23,8 +24,6 @@ from cascade.backends import num_args
 from ppcascade.utils.patch import PatchModule
 from ppcascade.utils.io import retrieve as ek_retrieve
 from ppcascade.utils import grib
-from ppcascade.wrappers.metadata import GribMetadata
-from ppcascade.wrappers.array_list import ArrayFieldList
 
 
 def standardise_output(data):
@@ -56,7 +55,7 @@ def resolve_metadata(metadata: Metadata, *args) -> dict:
     return metadata(*args)
 
 
-def new_fieldlist(data, metadata: list[GribMetadata], overrides: dict):
+def new_fieldlist(data, metadata: list[StandAloneGribMetadata], overrides: dict):
     if len(overrides) > 0:
         try:
             new_metadata = [
@@ -366,7 +365,7 @@ class ArrayFieldListBackend:
 
     def cluster(
         config,
-        pca_output: tuple[dict, GribMetadata],
+        pca_output: tuple[dict, StandAloneGribMetadata],
         ncomp_file: str,
         indexes: str,
         deterministic: str,
@@ -465,7 +464,7 @@ class ArrayFieldListBackend:
             res = ek_retrieve(request, **kwargs)
             ret = ArrayFieldList(
                 res.values,
-                [GribMetadata(metadata._handle) for metadata in res.metadata()],
+                [StandAloneGribMetadata(metadata._handle) for metadata in res.metadata()],
             )
             return ret
 
