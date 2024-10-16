@@ -33,7 +33,7 @@ def mir_job(
     job.execute(input, stream)
     stream.seek(0)
     if cache is None:
-        return StreamSource(stream, batch_size=0).mutate()
+        return StreamSource(stream, read_all=True).mutate()
 
     with open(cache, "wb") as o, stream as i:
         shutil.copyfileobj(i, o)
@@ -43,7 +43,7 @@ def mir_job(
 def fdb_retrieve(request: dict, *, stream: bool = True) -> Source:
     mir_options = request.pop("interpolate", None)
     if mir_options is None:
-        return from_source("fdb", request, batch_size=0, stream=stream)
+        return from_source("fdb", request, read_all=True, stream=stream)
 
     reader = from_source("fdb", request, stream=stream)
     if stream:
