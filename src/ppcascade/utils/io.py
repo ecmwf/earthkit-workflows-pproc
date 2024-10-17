@@ -90,10 +90,13 @@ def _transform_request(request: dict, step_type: type = str):
         request["paramId"] = paramId
     except:
         pass
-    request["date"] = int(request["date"])
-    time = int(request["time"])
-    request["time"] = time if time % 100 == 0 else time * 100
-    request["step"] = _transform_steps(request["step"], step_type)
+    if request.get("date", None) is not None:
+        request["date"] = int(request["date"])
+    if request.get("time", None) is not None:
+        time = int(request["time"])
+        request["time"] = time if time % 100 == 0 else time * 100
+    if request.get("step", None) is not None:
+        request["step"] = _transform_steps(request["step"], step_type)
     return request
 
 
@@ -102,14 +105,16 @@ def file_retrieve(path: str, request: dict) -> Source:
     if mir_options is not None:
         raise NotImplementedError()
     location = path.format_map(request)
-    file_ds = from_source("file", location)
-    ds = file_ds.sel(_transform_request(request))
-    if len(ds) == 0:
-        try:
-            request["step"] = _transform_steps(request["step"], int)
-            ds = file_ds.sel(request)
-        except ValueError:
-            pass
+    ds = from_source("file", location)
+    if len(request) > 0:
+        treq = _transform_request(request)
+        ds = ds.sel(treq)
+        if len(ds) == 0:
+            try:
+                treq = _transform_request(request, int)
+                ds = ds.sel(treq)
+            except ValueError:
+                pass
     return ds
 
 

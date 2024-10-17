@@ -8,7 +8,7 @@ from earthkit.data.core.metadata import RawMetadata
 
 from ppcascade import backends
 from ppcascade.backends.fieldlist import ArrayFieldListBackend
-from ppcascade.wrappers.array_list import ArrayFieldList
+from earthkit.data.sources.array_list import ArrayFieldList
 from generic_tests import *
 
 
