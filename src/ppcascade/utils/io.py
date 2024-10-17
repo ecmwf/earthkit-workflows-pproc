@@ -105,17 +105,18 @@ def file_retrieve(path: str, request: dict) -> Source:
     if mir_options is not None:
         raise NotImplementedError()
     location = path.format_map(request)
-    ds = from_source("file", location)
+    file_ds = from_source("file", location)
     if len(request) > 0:
         treq = _transform_request(request)
-        ds = ds.sel(treq)
+        ds = file_ds.sel(treq)
         if len(ds) == 0:
             try:
                 treq = _transform_request(request, int)
-                ds = ds.sel(treq)
+                ds = file_ds.sel(treq)
             except ValueError:
                 pass
-    return ds
+        return ds
+    return file_ds
 
 
 def retrieve(request: dict | list[dict], **kwargs):
