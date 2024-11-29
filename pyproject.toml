@@ -14,7 +14,7 @@ dependencies = [
     "cython",
     "scipy",
     "code-meters",
-    "earthkit-data @ git+ssh://git@github.com/ecmwf/earthkit-data.git@develop",
+    "earthkit-data==0.11.3",
     "cascade-python @ git+ssh://git@github.com/ecmwf/cascade.git",
     "pyfdb @ git+https://github.com/ecmwf/pyfdb.git@master",
     "pproc @ git+ssh://git@github.com/ecmwf/pproc.git@1.2.0"
