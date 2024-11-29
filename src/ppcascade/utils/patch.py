@@ -1,5 +1,5 @@
-import inspect
 import importlib
+import inspect
 
 
 class PatchModule:

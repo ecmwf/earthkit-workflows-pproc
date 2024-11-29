@@ -1,12 +1,12 @@
 import bisect
-from datetime import timedelta
 import copy
+from datetime import timedelta
 
-from pproc.common.config import Config as BaseConfig
 from pproc.clustereps.config import FullClusterConfig
+from pproc.common.config import Config as BaseConfig
 
 from .utils.io import _source_from_location
-from .utils.request import Request, MultiSourceRequest
+from .utils.request import MultiSourceRequest, Request
 from .utils.window import WindowConfig
 
 
@@ -62,7 +62,7 @@ class ParamConfig:
             start_index = self.steps.index(window.start)
         else:
             start_index = bisect.bisect_right(self.steps, window.start)
-        return self.steps[start_index : self.steps.index(window.end) + 1]
+        return self.steps[start_index: self.steps.index(window.end) + 1]
 
     def forecast_request(self, ens: str, no_expand: tuple[str] = ()):
         source, requests = _source_from_location(ens, self.sources)

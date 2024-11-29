@@ -1,13 +1,12 @@
-from io import BytesIO
 import shutil
+from io import BytesIO
 
 import mir
-from pproc.common.io import split_location
-from earthkit.data.sources.stream import StreamSource
-from earthkit.data.sources.file import FileSource
+from earthkit.data import SimpleFieldList, settings
 from earthkit.data.sources import Source, from_source
-from earthkit.data import SimpleFieldList
-from earthkit.data import settings
+from earthkit.data.sources.file import FileSource
+from earthkit.data.sources.stream import StreamSource
+from pproc.common.io import split_location
 
 # Set cache policy to "temporary" to avoid "database is locked" errors when
 # for wind when executing across multiple workers

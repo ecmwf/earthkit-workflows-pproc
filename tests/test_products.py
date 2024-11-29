@@ -1,9 +1,9 @@
-import pytest
 import os
 
-from ppcascade import products
-
+import pytest
 from helpers.mock import mock_args, mock_cluster_args
+
+from ppcascade import products
 
 ROOT_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)))
 

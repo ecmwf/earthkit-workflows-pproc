@@ -31,18 +31,18 @@ class WindowConfig:
             name = f"{start}-{end}"
 
             # Set steps in window
-            if step != None:
+            if step is not None:
                 range_start = start if self.include_init else start + step
                 steps = list(range(range_start, end + 1, step))
             else:
-                assert allowed_steps != None or len(allowed_steps) != 0
+                assert allowed_steps is not None or len(allowed_steps) != 0
 
                 if self.include_init:
                     start_index = allowed_steps.index(start)
                 else:
                     # Case when window.start not in steps
                     start_index = bisect.bisect_right(allowed_steps, start)
-                steps = allowed_steps[start_index : allowed_steps.index(end) + 1]
+                steps = allowed_steps[start_index: allowed_steps.index(end) + 1]
 
         assert name not in self.ranges
         self.ranges.append(Range(name, steps))

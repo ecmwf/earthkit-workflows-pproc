@@ -1,4 +1,5 @@
-from cascade.fluent import Payload, Node
+from cascade.fluent import Node, Payload
+
 from ppcascade.entry import parser
 
 

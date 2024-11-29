@@ -1,15 +1,15 @@
-import sys
-import os
 import argparse
+import os
+import sys
 
-from meters import ResourceMeter
 from cascade.cascade import Cascade
+from cascade.executors.dask import DaskClientExecutor, DaskLocalExecutor
 from cascade.executors.executor import Executor
-from cascade.executors.dask import DaskLocalExecutor, DaskClientExecutor
+from meters import ResourceMeter
 
+from ppcascade import products
 from ppcascade.entry.genconfig import RequestTranslator
 from ppcascade.entry.parser import ArgsFile
-from ppcascade import products
 
 
 def graph_from_request(args) -> Cascade:

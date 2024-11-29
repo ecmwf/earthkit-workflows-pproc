@@ -1,12 +1,11 @@
-from typing import Any
-import yaml
-import copy
 import bisect
-
-
+import copy
 from datetime import datetime, timedelta
+from typing import Any
 
-from .parsemars import ComputeRequest, ProductType, MarsKey, parse_request
+import yaml
+
+from .parsemars import ComputeRequest, MarsKey, ProductType, parse_request
 
 
 class ConfigDefaults:

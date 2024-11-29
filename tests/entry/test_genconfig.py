@@ -12,13 +12,13 @@ def generate_request(param: int, param_type: str, steps: str, extra_keys: str):
     levelist=250/500/850,
     levtype=pl,
     stream=enfo,
-    date=20230914,            
-    time=12,                 
-    param={param},               
-	grid=O640,                
-	step={steps},               
-	target=fileset:test.grib,{extra_keys}
-	type={param_type}
+    date=20230914,
+    time=12,
+    param={param},
+    grid=O640,
+    step={steps},
+    target=fileset:test.grib,{extra_keys}
+    type={param_type}
 """
 
 

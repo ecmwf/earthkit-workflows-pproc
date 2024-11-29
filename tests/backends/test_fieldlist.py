@@ -1,15 +1,15 @@
-import pytest
-import numpy.random as random
-import dill
 import datetime
-import numpy as np
 
+import dill
+import numpy as np
+import numpy.random as random
+import pytest
+from earthkit.data import FieldList, SimpleFieldList
 from earthkit.data.core.metadata import RawMetadata
+from generic_tests import *
 
 from ppcascade import backends
 from ppcascade.backends.fieldlist import SimpleFieldListBackend
-from earthkit.data import FieldList, SimpleFieldList
-from generic_tests import *
 
 
 class MockMetaData(RawMetadata):

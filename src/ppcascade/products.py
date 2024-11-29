@@ -1,14 +1,11 @@
 import argparse
 
-from cascade.graph import Graph, deduplicate_nodes
 from cascade.fluent import Payload
+from cascade.graph import Graph, deduplicate_nodes
 
+from .config import ClusterConfig, Config
 from .fluent import from_source
 from .utils import grib
-from .config import (
-    Config,
-    ClusterConfig,
-)
 
 
 def ensemble_anomaly(args: argparse.Namespace, deduplicate: bool = True):

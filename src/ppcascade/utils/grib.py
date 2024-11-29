@@ -1,5 +1,3 @@
-import functools
-
 from earthkit.data import FieldList
 
 from .window import Range

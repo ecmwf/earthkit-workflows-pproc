@@ -1,14 +1,13 @@
-import numpy as np
 import functools
 import inspect
 
-from cascade import fluent
-from cascade import backends
+import numpy as np
+from cascade import backends, fluent
 
-from .utils.window import Range
-from .utils.request import Request, MultiSourceRequest
-from .utils import grib
 from .backends import fieldlist
+from .utils import grib
+from .utils.request import MultiSourceRequest, Request
+from .utils.window import Range
 
 
 class Action(fluent.Action):

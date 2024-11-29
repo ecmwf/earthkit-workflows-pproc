@@ -1,7 +1,6 @@
-import xarray as xr
 import numpy as np
 import pytest
-
+import xarray as xr
 from earthkit.meteo.extreme import array as extreme
 
 from ppcascade.utils.patch import PatchModule

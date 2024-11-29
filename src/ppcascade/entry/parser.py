@@ -1,6 +1,6 @@
 import os
-import yaml
 
+import yaml
 from pproc.clustereps.__main__ import get_parser as cluster_parser
 from pproc.common.config import default_parser
 

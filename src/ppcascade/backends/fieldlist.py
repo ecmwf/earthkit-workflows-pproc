@@ -1,29 +1,24 @@
-import array_api_compat
-import numpy as np
-from meters import ResourceMeter
 from os.path import join as pjoin
 from typing import TypeAlias
 
+import array_api_compat
+import numpy as np
+from cascade.backends import num_args
 from earthkit.data import FieldList, SimpleFieldList
 from earthkit.data.readers.grib.metadata import StandAloneGribMetadata
 from earthkit.meteo.extreme import array as extreme
 from earthkit.meteo.stats import array as stats
-from pproc.common.io import (
-    target_from_location,
-    write_grib,
-    FileTarget,
-    FileSetTarget,
-)
+from meters import ResourceMeter
 from pproc import clustereps
-from pproc.clustereps.utils import normalise_angles
-from pproc.clustereps.io import read_steps_grib
 from pproc.clustereps.__main__ import write_cluster_attr_grib
 from pproc.clustereps.cluster import get_output_keys
-from cascade.backends import num_args
+from pproc.clustereps.io import read_steps_grib
+from pproc.clustereps.utils import normalise_angles
+from pproc.common.io import FileSetTarget, FileTarget, target_from_location, write_grib
 
-from ppcascade.utils.patch import PatchModule
-from ppcascade.utils.io import retrieve as ek_retrieve
 from ppcascade.utils import grib
+from ppcascade.utils.io import retrieve as ek_retrieve
+from ppcascade.utils.patch import PatchModule
 
 
 def standardise_output(data):
@@ -134,22 +129,30 @@ class SimpleFieldListBackend:
             "mean", *arrays, metadata=metadata
         )
 
-    def std(*arrays: list[SimpleFieldList], metadata: Metadata = None) -> SimpleFieldList:
+    def std(
+        *arrays: list[SimpleFieldList], metadata: Metadata = None
+    ) -> SimpleFieldList:
         return SimpleFieldListBackend.multi_arg_function(
             "std", *arrays, metadata=metadata
         )
 
-    def min(*arrays: list[SimpleFieldList], metadata: Metadata = None) -> SimpleFieldList:
+    def min(
+        *arrays: list[SimpleFieldList], metadata: Metadata = None
+    ) -> SimpleFieldList:
         return SimpleFieldListBackend.multi_arg_function(
             "min", *arrays, metadata=metadata
         )
 
-    def max(*arrays: list[SimpleFieldList], metadata: Metadata = None) -> SimpleFieldList:
+    def max(
+        *arrays: list[SimpleFieldList], metadata: Metadata = None
+    ) -> SimpleFieldList:
         return SimpleFieldListBackend.multi_arg_function(
             "max", *arrays, metadata=metadata
         )
 
-    def sum(*arrays: list[SimpleFieldList], metadata: Metadata = None) -> SimpleFieldList:
+    def sum(
+        *arrays: list[SimpleFieldList], metadata: Metadata = None
+    ) -> SimpleFieldList:
         return SimpleFieldListBackend.multi_arg_function(
             "sum", *arrays, metadata=metadata
         )
@@ -161,7 +164,9 @@ class SimpleFieldListBackend:
             "prod", *arrays, metadata=metadata
         )
 
-    def var(*arrays: list[SimpleFieldList], metadata: Metadata = None) -> SimpleFieldList:
+    def var(
+        *arrays: list[SimpleFieldList], metadata: Metadata = None
+    ) -> SimpleFieldList:
         return SimpleFieldListBackend.multi_arg_function(
             "var", *arrays, metadata=metadata
         )
@@ -174,8 +179,12 @@ class SimpleFieldListBackend:
         ), "Can not stack FieldLists with more than one element, use concat"
         return SimpleFieldListBackend.concat(*arrays)
 
-    def add(*arrays: list[SimpleFieldList], metadata: Metadata = None) -> SimpleFieldList:
-        return SimpleFieldListBackend.two_arg_function("add", *arrays, metadata=metadata)
+    def add(
+        *arrays: list[SimpleFieldList], metadata: Metadata = None
+    ) -> SimpleFieldList:
+        return SimpleFieldListBackend.two_arg_function(
+            "add", *arrays, metadata=metadata
+        )
 
     def subtract(
         *arrays: list[SimpleFieldList], metadata: Metadata = None
@@ -206,8 +215,12 @@ class SimpleFieldListBackend:
             "divide", *arrays, metadata=metadata
         )
 
-    def pow(*arrays: list[SimpleFieldList], metadata: Metadata = None) -> SimpleFieldList:
-        return SimpleFieldListBackend.two_arg_function("pow", *arrays, metadata=metadata)
+    def pow(
+        *arrays: list[SimpleFieldList], metadata: Metadata = None
+    ) -> SimpleFieldList:
+        return SimpleFieldListBackend.two_arg_function(
+            "pow", *arrays, metadata=metadata
+        )
 
     def concat(*arrays: list[SimpleFieldList]) -> SimpleFieldList:
         """
@@ -357,7 +370,7 @@ class SimpleFieldListBackend:
                 mask,
             )
 
-        ## Save data
+        # Save data
         if target is not None:
             np.savez_compressed(target, **pca_data)
 
@@ -372,7 +385,7 @@ class SimpleFieldListBackend:
     ):
         pca_data, pca_metadata = pca_output
 
-        ## Compute number of PCs based on the variance threshold
+        # Compute number of PCs based on the variance threshold
         var_cum = pca_data["var_cum"]
         npc = config.npc
         if npc <= 0:
@@ -395,7 +408,7 @@ class SimpleFieldListBackend:
                 config, pca_data, npc, verbose=True, dump_indexes=indexes
             )
 
-        ## Find the deterministic forecast
+        # Find the deterministic forecast
         if deterministic is not None:
             with ResourceMeter("Find deterministic"):
                 det = read_steps_grib(config.sources, deterministic, config.steps)
@@ -434,7 +447,7 @@ class SimpleFieldListBackend:
                 config.climMeans, config.seasons, config.stepDate
             )
 
-            ## Read climatological EOFs
+            # Read climatological EOFs
             clim_eof, clim_ind = clustereps.attribution.get_climatology_eof(
                 config.climClusterCentroidsEOF,
                 config.climEOFs,
@@ -448,7 +461,7 @@ class SimpleFieldListBackend:
 
         weights = pca_data["weights"]
 
-        ## Compute anomalies
+        # Compute anomalies
         anom = scdata - clim
         anom = np.clip(anom, -config.clip, config.clip)
 
@@ -464,7 +477,10 @@ class SimpleFieldListBackend:
             res = ek_retrieve(request, **kwargs)
             ret = FieldList.from_array(
                 res.values,
-                [StandAloneGribMetadata(metadata._handle) for metadata in res.metadata()],
+                [
+                    StandAloneGribMetadata(metadata._handle)
+                    for metadata in res.metadata()
+                ],
             )
             return ret
 
@@ -500,7 +516,7 @@ class SimpleFieldListBackend:
 
         keys, steps = get_output_keys(config, metadata)
         with ResourceMeter(f"WRITE {scenario}"):
-            ## Write anomalies and cluster scenarios
+            # Write anomalies and cluster scenarios
             dest, adest = cluster_dests
             target = target_from_location(dest)
             anom_target = target_from_location(adest)
@@ -519,7 +535,7 @@ class SimpleFieldListBackend:
                 ncl_dummy=config.ncl_dummy,
             )
 
-            ## Write report output
+            # Write report output
             # table: attribution cluster index for all fc clusters, step
             np.savetxt(
                 pjoin(
