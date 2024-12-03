@@ -48,7 +48,7 @@ def fdb_retrieve(request: dict, *, stream: bool = True) -> Source:
     if stream:
         if mir_options.get("vod2uv", "0") == "1":
             raise ValueError("Wind vod2uv not supported for stream=True")
-        return mir_job(reader._stream, mir_options)
+        return mir_job(reader._source._stream, mir_options)
 
     if mir_options.get("vod2uv", "0") == "1":
         if len(request["param"]) != 2:
@@ -152,5 +152,5 @@ def retrieve_single_source(request: dict, **kwargs) -> SimpleFieldList:
         raise NotImplementedError(f"Source {source} not supported.")
     assert (
         len(ret_sources) > 0
-    ), f"No data retrieved from {source} for request {request}"
+    ), f"No data retrieved from {source} for request {req}"
     return ret_sources
