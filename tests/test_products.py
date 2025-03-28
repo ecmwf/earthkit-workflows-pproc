@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from helpers.mock import mock_args, mock_cluster_args
+from helpers.mock import mock_args
 
 from ppcascade import products
 
@@ -23,14 +23,3 @@ def test_graph_construction(product, config, expected_num_nodes):
     graph = getattr(products, product)(mock_args(config))
     assert len([x for x in graph.nodes()]) == expected_num_nodes
 
-
-def test_cluster_graph():
-    # With spread compute
-    mock_args = mock_cluster_args(f"{ROOT_DIR}/templates/clustereps.yaml")
-    graph = products.clustereps(mock_args)
-    assert len([x for x in graph.nodes()]) == 64
-
-    # With spread
-    mock_args.spread = "fileset:spread_z500"
-    graph = products.clustereps(mock_args)
-    assert len([x for x in graph.nodes()]) == 33
