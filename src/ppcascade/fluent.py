@@ -18,18 +18,18 @@ class Action(fluent.Action):
         "10si": {"operation": "norm", "params": ["10u", "10v"]},
         "mrt": {
             "operation": math.calc_mrt,
-            "params": ["cossza", "dsrp", "ssrd", "fdir", "strd", "str", "ssr"],
+            "params": ["uvcossza", "dsrp", "ssrd", "fdir", "strd", "str", "ssr"],
         },
-        "cossza": {"operation": math.calc_cossza, "params": ["2t", "fdir"]},
-        "dsrp": {"operation": math.calc_dsrp, "params": ["fdir", "cossza"]},
+        "uvcossza": {"operation": math.calc_cossza, "params": ["2t", "fdir"]},
+        "dsrp": {"operation": math.calc_dsrp, "params": ["fdir", "uvcossza"]},
         "hmdx": {"operation": math.calc_hmdx, "params": ["2t", "2d"]},
-        "rhp": {"operation": math.calc_rhp, "params": ["2t", "2d"]},
+        "2r": {"operation": math.calc_rhp, "params": ["2t", "2d"]},
         "heatx": {"operation": math.calc_heatx, "params": ["2t", "2d"]},
         "wbgt": {"operation": math.calc_wbgt, "params": ["2t", "2d", "10si", "mrt"]},
         "gt": {"operation": math.calc_gt, "params": ["2t", "10si", "mrt"]},
-        "nefft": {"operation": math.calc_nefft, "params": ["2t", "10si", "rhp"]},
+        "nefft": {"operation": math.calc_nefft, "params": ["2t", "10si", "2r"]},
         "wcf": {"operation": math.calc_wcf, "params": ["2t", "10si"]},
-        "aptmp": {"operation": math.calc_aptmp, "params": ["2t", "rhp", "10si"]},
+        "aptmp": {"operation": math.calc_aptmp, "params": ["2t", "2r", "10si"]},
     }
 
     def _reduction_with_metadata(
