@@ -1,5 +1,6 @@
 import functools
 import inspect
+from typing import Any
 
 import numpy as np
 from cascade.backends.earthkit import FieldListBackend
@@ -9,7 +10,6 @@ from ppcascade.utils import io
 from ppcascade.utils import math
 from ppcascade.utils import grib
 from ppcascade.utils.request import MultiSourceRequest, Request
-from ppcascade.utils.window import Range
 
 
 class Action(fluent.Action):
@@ -103,6 +103,8 @@ class Action(fluent.Action):
             "max", dim=dim, batch_size=batch_size, keep_dim=keep_dim, metadata=metadata
         )
 
+    maximum = max
+
     def min(
         self,
         dim: str = "",
@@ -113,6 +115,8 @@ class Action(fluent.Action):
         return self._reduction_with_metadata(
             "min", dim=dim, batch_size=batch_size, keep_dim=keep_dim, metadata=metadata
         )
+
+    minimum = min
 
     def prod(
         self,
@@ -147,12 +151,12 @@ class Action(fluent.Action):
     def extreme(
         self,
         climatology: fluent.Action,
-        windows: list[Range],
+        step_ranges: list[str],
         sot: list[int],
         eps: float,
         efi_control: dict | None = None,
         ensemble_dim: str = "number",
-        window_dim: str = "step",
+        step_dim: str = "step",
         new_dim: str = "type",
         metadata: dict | None = None,
     ) -> "Action":
@@ -162,12 +166,13 @@ class Action(fluent.Action):
         Parameters
         ----------
         climatology: Action, nodes containing climatology data
-        windows: list of Range, list of window ranges
+        step_ranges: list of str, list of step ranges
         sot: list of ints, Shift-Of-Tail values
         eps: float
         efi_control: dict, selection for control member. If None, efi is not
         computed for the control member
-        dim: str, name of dimension for ensemble members
+        ensemble_dim: str, name of dimension for ensemble members
+        step_dim: str, name of dimension for steps
         new_dim: str, name of new dimension corresponding to EFI/SOT nodes.
 
         Return
@@ -176,15 +181,17 @@ class Action(fluent.Action):
         """
         eps = float(eps)
         concat = self.concatenate(dim=ensemble_dim)
-        efi = concat.efi(climatology, windows, eps, window_dim, metadata)
+        efi = concat.efi(climatology, step_ranges, eps, step_dim, metadata)
         efi._add_dimension(new_dim, "efi")
         if efi_control is not None:
             control = self.select(efi_control, drop=True).efi(
-                climatology, windows, eps, window_dim, metadata
+                climatology, step_ranges, eps, step_dim, metadata
             )
             control._add_dimension(new_dim, "efic")
             efi = efi.join(control, new_dim)
-        sot = concat.sot(climatology, windows, eps, sot, window_dim, new_dim, metadata)
+        sot = concat.sot(
+            climatology, step_ranges, eps, sot, step_dim, new_dim, metadata
+        )
         ret = efi.join(sot, dim=new_dim)
         return ret
 
@@ -192,27 +199,27 @@ class Action(fluent.Action):
         self,
         operation: str,
         climatology: fluent.Action,
-        windows: list[Range],
+        step_ranges: list[str],
         ensemble_dim: str = "number",
-        window_dim: str = "step",
+        step_dim: str = "step",
         **kwargs,
     ) -> "Action":
         if operation == "extreme":
             return self.extreme(
                 climatology,
-                windows,
+                step_ranges,
                 ensemble_dim=ensemble_dim,
-                window_dim=window_dim,
+                step_dim=step_dim,
                 **kwargs,
             )
         return self.concatenate(ensemble_dim).__getattribute__(operation)(
-            climatology, windows, dim=window_dim, **kwargs
+            climatology, step_ranges, dim=step_dim, **kwargs
         )
 
     def efi(
         self,
         climatology: fluent.Action,
-        windows: list[Range],
+        step_ranges: list[str],
         eps: float,
         dim: str = "step",
         metadata: dict | None = None,
@@ -224,7 +231,7 @@ class Action(fluent.Action):
         Parameters
         ----------
         climatology: Action, nodes containing climatology data
-        windows: list of Range, list of window ranges
+        step_ranges: list of str, list of step ranges
         eps: float
         dim: str, window dimension
 
@@ -234,8 +241,8 @@ class Action(fluent.Action):
         """
         eps = float(eps)
         if self.nodes.size == 1:
-            if len(windows) != 1:
-                raise ValueError("Single node, but multiple windows")
+            if len(step_ranges) != 1:
+                raise ValueError("Single node, but multiple step ranges")
             payload = fluent.Payload(
                 math.efi,
                 (fluent.Node.input_name(1), fluent.Node.input_name(0), eps),
@@ -246,14 +253,14 @@ class Action(fluent.Action):
         join = self.join(climatology, "**datatype**", match_coord_values=True)
         return join.transform(
             _efi_window_transform,
-            [({dim: window.name}, eps, metadata) for window in windows],
+            [({dim: srange}, eps, metadata) for srange in step_ranges],
             dim,
         )
 
     def sot(
         self,
         climatology: fluent.Action,
-        windows: list[Range],
+        step_ranges: list[str],
         eps: float,
         sot: list[int],
         dim: str = "step",
@@ -267,7 +274,7 @@ class Action(fluent.Action):
         Parameters
         ----------
         climatology: Action, nodes containing climatology data
-        windows: list of Range, list of window ranges
+        step_ranges: list of str, list of step ranges
         eps: float
         sot: list of ints, Shift-Of-Tail values
         dim: str, window dimension
@@ -282,8 +289,8 @@ class Action(fluent.Action):
             sot = [sot]
 
         if self.nodes.size == 1:
-            if len(windows) != 1:
-                raise ValueError("Single node, but multiple windows")
+            if len(step_ranges) != 1:
+                raise ValueError("Single node, but multiple step ranges")
             ret = self.join(
                 climatology, "**datatype**", match_coord_values=True
             ).transform(
@@ -293,7 +300,7 @@ class Action(fluent.Action):
             )
         else:
             params = [
-                ({dim: window.name}, sot, eps, new_dim, metadata) for window in windows
+                ({dim: srange}, sot, eps, new_dim, metadata) for srange in step_ranges
             ]
             ret = self.join(
                 climatology, "**datatype**", match_coord_values=True
@@ -386,15 +393,17 @@ class Action(fluent.Action):
 
     def quantiles(
         self,
-        num_quantiles: int = 100,
+        quantiles: int | list[float],
         dim: str = "number",
         new_dim: str = "quantile",
         metadata: dict | None = None,
     ) -> "Action":
-        params = [
-            (x, new_dim, metadata)
-            for x in np.linspace(0.0, 1.0, int(num_quantiles) + 1)
-        ]
+        quantiles = (
+            quantiles
+            if isinstance(quantiles, list)
+            else np.linspace(0.0, 1.0, int(quantiles) + 1)
+        )
+        params = [(x, new_dim, metadata) for x in quantiles]
         ret = self.concatenate(dim).transform(_quantiles_transform, params, new_dim)
         return ret
 
@@ -544,31 +553,36 @@ class Action(fluent.Action):
                 metadata["type"] = "em" if operation == "mean" else "es"
         return self._wrapped_reduction(operation, dim, batch_size, metadata, **kwargs)
 
-    def window_operation(
+    def accum_operation(
         self,
         operation: str | fluent.Payload,
-        ranges: list[Range],
+        coords: list[list[Any]],
         dim: str = "step",
         batch_size: int = 0,
         metadata: dict | None = None,
+        include_start: bool = False,
+        deaccumulate: bool = False,
         **kwargs,
     ) -> "Action":
         """
-        Reduction operation across steps. If batch_size > 1 and less than the size
+        Reduction operation across a dimension. If batch_size > 1 and less than the size
         of the named dimension, the reduction will be computed first in
         batches and then aggregated, otherwise no batching will be performed.
 
         Params
         ------
         operation: str or Payload, operation to perform on steps
-        ranges: list of Range, window ranges
+        coords: list of values to accumulate over
         dim: str, dimension to perform operation along
         batch_size: int, size of batches to split reduction into. If 0,
         computation is not batched
+        metadata: optional dict, metadata to set on the output
+        include_init: bool, whether to include the initial value in the accumulation
+        deaccumulate: bool, whether to deaccumulate consecutive values before accumulation
 
         Return
         ------
-        Single or MultiAction
+        Action
 
         Raises
         ------
@@ -579,9 +593,19 @@ class Action(fluent.Action):
             return self
 
         params = [
-            (dim, range, operation, batch_size, metadata, kwargs) for range in ranges
+            (
+                dim,
+                coord,
+                operation,
+                batch_size,
+                metadata,
+                include_start,
+                deaccumulate,
+                kwargs,
+            )
+            for coord in coords
         ]
-        return self.transform(_window_transform, params, dim)
+        return self.transform(_accum_transform, params, dim)
 
     def write(
         self, target: str, metadata: dict | fluent.Action | None = None
@@ -657,23 +681,30 @@ def _quantiles_transform(action, quantile: float, new_dim: str, metadata: dict |
     return new_quantile
 
 
-def _window_transform(
+def _accum_transform(
     action: fluent.Action,
     dim: str,
-    range: Range,
+    coords: list[Any],
     operation: str | fluent.Payload,
     batch_size: int,
     metadata: dict | None,
+    include_start: bool,
+    deaccumulate: bool,
     kwargs: dict,
 ) -> fluent.Action:
-    window_action = action.select({dim: range.steps})
-    if len(range.steps) == 1:
+    if len(coords) == 1:
         # Nothing to reduce and no metadata to set
-        return window_action
+        return action.select({dim: coords})
 
     metadata = {} if metadata is None else metadata.copy()
-    window_metadata = grib.window(operation, range)
+    window_metadata = grib.window(operation, coords, include_start)
     metadata.update(window_metadata)
+
+    if deaccumulate:
+        window_action = action.select({dim: coords[:-1]})
+        window_action = window_action.subtract(action.select({dim: coords[1:]}))
+    else:
+        window_action = action.select({dim: coords if include_start else coords[1:]})
 
     window_action = window_action._wrapped_reduction(
         operation,
@@ -683,7 +714,7 @@ def _window_transform(
         **kwargs,
     )
 
-    window_action._add_dimension(dim, range.name)
+    window_action._add_dimension(dim, f"{coords[0]}-{coords[-1]}")
     return window_action
 
 

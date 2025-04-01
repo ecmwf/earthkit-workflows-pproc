@@ -1,105 +1,123 @@
-out_keys:
-  mars.expver: '9078'
-members: 5
-parameters:
-  - target: fileset:wind_{step}_{stream}.grib
-    param:
-      operation: wind_speed
-    defs:
-      base_keys: &base_keys
-        class: od
-        domain: g
-        expver: '0001'
-        levtype: sfc
-        param: [165, 166]
-        date: 20230914
-        time: 12
-      base_interp: &base_interp
-        grid: O640
-        intgrid: none
-        legendre-loader: shmem
-        matrix-loader: file-io
-    sources:
-      fdb:
-        fc:
-          - <<: *base_keys
-            stream: enfo
-            type: pf
-            interpolate: *base_interp
-          - <<: *base_keys
-            stream: enfo
-            type: cf
-            interpolate: *base_interp
-    windows:
-      include_start_step: true
-      ranges:
-        - [0, 6, 3]
-    grib_set:
-      indicatorOfParameter: 207
-      gribTablesVersionNo: 128
-      bitsPerValue: 16
-  - target: fileset:wind_{step}_{type}.grib
-    param:
-      operation: wind_speed
-    defs:
-      base_keys: &vod2uv_base_keys
-        class: od
-        domain: g
-        expver: '0001'
-        levtype: pl
-        param: [138, 155]
-        stream: enfo
-        levelist: [250, 850]
-        date: 20230914
-        time: 12
-      base_interp: &vod2uv_base_interp
-        vod2uv: "1"
-        grid: O640
-        intgrid: none
-        legendre-loader: shmem
-        matrix-loader: file-io
-    sources:
-      fdb:
-        fc:
-          - <<: *vod2uv_base_keys
-            type: cf
-            interpolate: *vod2uv_base_interp
-          - <<: *vod2uv_base_keys
-            type: pf
-            interpolate: *vod2uv_base_interp  
-    windows:
-      include_start_step: true
-      ranges:
-        - [0, 6, 3]
-    grib_set:
-      gribTablesVersionNo: 128
-      indicatorOfParameter: 10
-      bitsPerValue: 24
-    ensemble:
-      operation: ensms
-  - target: fileset:wind_{step}_{type}.grib
-    param:
-      operation: wind_speed
-    sources:
-      fdb:
-        fc:
-          class: od
-          domain: g
-          expver: '0001'
-          levtype: pl
-          param: [138, 155]
-          stream: enfo
-          levelist: 250
-          date: 20230914
-          time: 12
-          type: pf
-          interpolate: *vod2uv_base_interp  
-    windows:
-      ranges:
-        - [0, 0]
-    grib_set:
-      gribTablesVersionNo: 128
-      indicatorOfParameter: 10
-      bitsPerValue: 24
-    ensemble:
-      operation: ensms
+- class: od
+  stream: enfo
+  type: em
+  levtype: sfc
+  domain: g
+  param: "10"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 0
+- class: od
+  stream: enfo
+  type: em
+  levtype: sfc
+  domain: g
+  param: "10"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 3
+- class: od
+  stream: enfo
+  type: em
+  levtype: sfc
+  domain: g
+  param: "10"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 6
+- class: od
+  stream: enfo
+  type: es
+  levtype: sfc
+  domain: g
+  param: "10"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 0
+- class: od
+  stream: enfo
+  type: es
+  levtype: sfc
+  domain: g
+  param: "10"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 3
+- class: od
+  stream: enfo
+  type: es
+  levtype: sfc
+  domain: g
+  param: "207"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 6
+- class: od
+  stream: enfo
+  type: cf
+  levtype: sfc
+  domain: g
+  param: "10"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 0
+- class: od
+  stream: enfo
+  type: cf
+  levtype: sfc
+  domain: g
+  param: "10"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 3
+- class: od
+  stream: enfo
+  type: cf
+  levtype: sfc
+  domain: g
+  param: "10"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 6
+- class: od
+  stream: enfo
+  type: pf
+  number: [1, 2, 3, 4, 5]
+  levtype: sfc
+  domain: g
+  param: "10"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 0
+- class: od
+  stream: enfo
+  type: pf
+  number: [1, 2, 3, 4, 5]
+  levtype: sfc
+  domain: g
+  param: "10"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 3
+- class: od
+  stream: enfo
+  type: pf
+  number: [1, 2, 3, 4, 5]
+  levtype: sfc
+  domain: g
+  param: "10"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 6

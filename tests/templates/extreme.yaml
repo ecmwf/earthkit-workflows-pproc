@@ -1,166 +1,124 @@
-out_keys:
-  bitsPerValue: 12
-members:
-  end: 5
-  start: 1
-parameters:
-  - target: "fileset:cascade_extreme_{param}.grib"
-    ensemble:
-      operation: extreme
-      eps: 1e-4
-      sot: [90]
-      efi_control: True
-    defs:
-      base_keys: &base_keys_tp
-        class: od
-        domain: g
-        expver: '0001'
-        levtype: sfc
-        param: 228
-      base_interp: &base_interp_tp
-        grid: 'O640'
-        intgrid: none
-        legendre-loader: shmem
-        matrix-loader: file-io
-    sources:
-      fdb:
-        fc:
-          - <<: *base_keys_tp
-            date: 20230914
-            time: 12
-            stream: enfo
-            type: cf
-            interpolate: *base_interp_tp
-          - <<: *base_keys_tp
-            date: 20230914
-            time: 12
-            stream: enfo
-            type: pf
-            interpolate: *base_interp_tp
-        clim:
-          <<: *base_keys_tp
-          date: '20230911'
-          time: '00'
-          stream: efhs
-          type: cd
-          quantile: 100
-          interpolate: *base_interp_tp
-          step:
-            12-36: 0-24
-            12-84: 0-72
-            36-60: 24-48
-    windows:
-      ranges:
-      - [12, 36, 24]
-      - [36, 60, 24]
-      - [12, 84, 72]
-      operation: diff
-      include_start_step: True
-    grib_set:
-      edition: 1
-      gribTablesVersionNo: 132
-      indicatorOfParameter: 228
-      localDefinitionNumber: 19
-      mars.expver: '9078'
-      timeRangeIndicator: 5
-      stepType: diff
-  - target: "fileset:cascade_extreme_{param}.grib"
-    defs:
-      base_keys: &base_keys_capeshear
-        class: od
-        domain: g
-        expver: '0001'
-        levtype: sfc
-      base_interp: &base_interp_capeshear
-        grid: 'O1280'
-        intgrid: none
-        legendre-loader: shmem
-        matrix-loader: file-io
-    sources:
-      fdb:
-        fc:
-          - <<: *base_keys_capeshear
-            stream: enfo
-            type: cf
-            date: 20230914
-            time: 12
-            param: [228036, 228035]
-            interpolate: *base_interp_capeshear
-          - <<: *base_keys_capeshear
-            stream: enfo
-            type: pf
-            date: 20230914
-            time: 12
-            param: [228036, 228035]
-            interpolate: *base_interp_capeshear
-        clim:
-          <<: *base_keys_capeshear
-          date: '20230911'
-          time: '00'
-          param: 228044
-          stream: efhs
-          type: cd
-          quantile: 100
-          interpolate: *base_interp_capeshear
-          step:
-            12-36: 0-24
-    ensemble:
-      operation: extreme
-      eps: 1e-4
-      sot: [90]
-    param:
-      operation: filter
-      comparison: <=
-      threshold: 10
-    windows:
-      ranges:
-      - [12, 36, 6]
-      operation: max
-    grib_set:
-      param: 228035
-      typeOfStatisticalProcessing: 1
-      edition: 1
-      indicatorOfTypeOfLevel: 1
-      timeRangeIndicator: 2
-      indicatorOfParameter: 44
-      gribTablesVersionNo: 132
-      localDefinitionNumber: 19
-      mars.expver: '9078'
-  - target: "fileset:cascade_extreme_{param}.grib"
-    sources:
-      fdb:
-        fc:
-          <<: *base_keys_tp
-          date: 20230914
-          time: 12
-          stream: enfo
-          type: cf
-          interpolate: *base_interp_tp
-        clim:
-          <<: *base_keys_tp
-          date: '20230911'
-          time: '00'
-          stream: efhs
-          type: cd
-          quantile: 100
-          interpolate: *base_interp_tp
-          step:
-            12-36: 0-24
-    ensemble:
-      operation: extreme
-      eps: 1e-4
-      sot: [90]
-      efi_control: True
-    windows:
-      ranges:
-      - [12, 12]
-    grib_set:
-      param: 228035
-      typeOfStatisticalProcessing: 1
-      edition: 1
-      indicatorOfTypeOfLevel: 1
-      timeRangeIndicator: 2
-      indicatorOfParameter: 44
-      gribTablesVersionNo: 132
-      localDefinitionNumber: 19
-      mars.expver: '9078'
+- class: od
+  stream: enfo
+  type: efi
+  levtype: sfc
+  domain: g
+  param: "132228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 12-36
+- class: od
+  stream: enfo
+  type: efi
+  levtype: sfc
+  domain: g
+  param: "132228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 36-60
+- class: od
+  stream: enfo
+  type: efi
+  levtype: sfc
+  domain: g
+  param: "132228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 12-84
+- class: od
+  stream: enfo
+  type: efic
+  levtype: sfc
+  domain: g
+  param: "132228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 12-36
+- class: od
+  stream: enfo
+  type: efic
+  levtype: sfc
+  domain: g
+  param: "132228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 36-60
+- class: od
+  stream: enfo
+  type: efic
+  levtype: sfc
+  domain: g
+  param: "132228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 12-84
+- class: od
+  stream: enfo
+  type: sot
+  number: [90]
+  levtype: sfc
+  domain: g
+  param: "132228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 12-36
+- class: od
+  stream: enfo
+  type: sot
+  number: [90]
+  levtype: sfc
+  domain: g
+  param: "132228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 36-60
+- class: od
+  stream: enfo
+  type: sot
+  number: [90]
+  levtype: sfc
+  domain: g
+  param: "132228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 12-84
+- class: od
+  stream: enfo
+  type: efi
+  levtype: sfc
+  domain: g
+  param: "132044"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 12-36
+- class: od
+  stream: enfo
+  type: efic
+  levtype: sfc
+  domain: g
+  param: "132044"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 12-36
+- class: od
+  stream: enfo
+  type: sot
+  number: [90]
+  levtype: sfc
+  domain: g
+  param: "132044"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 12-36

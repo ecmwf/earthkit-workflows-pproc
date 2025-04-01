@@ -1,6 +1,4 @@
 import array_api_compat
-import datetime
-import copy
 from cascade.backends.earthkit import (
     Metadata,
     resolve_metadata,
@@ -11,7 +9,6 @@ from earthkit.data import FieldList
 from earthkit.meteo.extreme import array as extreme
 from earthkit.meteo.stats import array as stats
 import earthkit.meteo.solar
-import thermofeel
 from meters import ResourceMeter
 from pproc.thermo.indices import ComputeIndices
 

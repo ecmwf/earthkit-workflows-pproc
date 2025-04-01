@@ -1,114 +1,106 @@
-out_keys:
-  numberOfForecastsInEnsemble: 6
-  perturbationNumber: 0
-  bitsPerValue: 16
-members: 5
-parameters:
-  - target: fileset:cascade_{param}.grib
-    defs:
-      base_keys: &base_keys_T
-        class: od
-        domain: g
-        expver: '0001'
-        levelist: [250, 500, 850]
-        levtype: pl
-        stream: enfo
-        param: 130
-        date: 20230914
-        time: 12
-      base_interp: &base_interp
-        grid: O640
-        intgrid: none
-        legendre-loader: shmem
-        matrix-loader: file-io
-    sources:
-      fdb:
-        fc:
-          - <<: *base_keys_T
-            type: pf
-            interpolate: *base_interp
-          - <<: *base_keys_T
-            type: cf
-            interpolate: *base_interp
-    windows:
-      include_start_step: True
-      ranges:
-        - [0, 6, 3]
-    ensemble:
-      operation: ensms
-  - target: fileset:cascade_{param}.grib
-    defs:
-      base_keys: &base_keys_mn2t6
-        class: od
-        domain: g
-        expver: '0001'
-        levtype: sfc
-        stream: enfo
-        param: '122.128'
-        date: 20230914
-        time: 12
-    sources:
-      fdb:
-        fc:
-          - <<: *base_keys_mn2t6
-            type: pf
-          - <<: *base_keys_mn2t6
-            type: cf
-    windows:
-      ranges:
-      - [0, 0, 6]
-      - [0, 6, 6]
-      - [6, 12, 6]
-    ensemble:
-      operation: ensms
-  - target: fileset:cascade_{param}.grib
-    defs:
-      base_keys: &base_keys_tp
-        class: od
-        domain: g
-        expver: '0001'
-        levtype: sfc
-        stream: enfo
-        param: 228
-        date: 20230914
-        time: 12
-    sources:
-      fdb:
-        fc:
-          - <<: *base_keys_tp
-            type: cf
-          - <<: *base_keys_tp
-            type: pf
-    windows:
-      ranges:
-        - [0, 6, 6]
-        - [3, 9, 6]
-        - [6, 12, 6]
-      operation: diff
-      include_start_step: True
-    ensemble:
-      operation: ensms
-    grib_set:
-      paramId: 200228
-      stepType: diff
-  - target: fileset:cascade_{param}.grib
-    sources:
-      fdb:
-        fc:
-          class: od
-          domain: g
-          expver: '0001'
-          levelist: 250
-          levtype: pl
-          stream: enfo
-          param: 130
-          date: 20230914
-          time: 12
-          type: pf
-          interpolate: *base_interp
-    windows:
-      include_start_step: True
-      ranges:
-        - [0, 0, 0]
-    ensemble:
-      operation: ensms
+- class: od
+  stream: enfo
+  type: em
+  levtype: pl
+  levelist: [250, 500, 850]
+  domain: g
+  param: "130"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 0
+- class: od
+  stream: enfo
+  type: em
+  levtype: pl
+  levelist: [250, 500, 850]
+  domain: g
+  param: "130"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 3
+- class: od
+  stream: enfo
+  type: em
+  levtype: pl
+  levelist: [250, 500, 850]
+  domain: g
+  param: "130"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 6
+- class: od
+  stream: enfo
+  type: es
+  levtype: pl
+  levelist: [250, 500, 850]
+  domain: g
+  param: "130"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 0
+- class: od
+  stream: enfo
+  type: es
+  levtype: pl
+  levelist: [250, 500, 850]
+  domain: g
+  param: "130"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 3
+- class: od
+  stream: enfo
+  type: es
+  levtype: pl
+  levelist: [250, 500, 850]
+  domain: g
+  param: "130"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 6
+- class: od
+  stream: enfo
+  type: em
+  levtype: sfc
+  domain: g
+  param: "200228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 0-6
+- class: od
+  stream: enfo
+  type: em
+  levtype: sfc
+  domain: g
+  param: "200228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 6-12
+- class: od
+  stream: enfo
+  type: es
+  levtype: sfc
+  domain: g
+  param: "200228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 0-6
+- class: od
+  stream: enfo
+  type: es
+  levtype: sfc
+  domain: g
+  param: "200228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 6-12

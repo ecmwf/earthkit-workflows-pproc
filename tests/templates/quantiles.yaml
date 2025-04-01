@@ -1,72 +1,55 @@
-members: 5
-quantiles: &quantiles 4
-out_keys:
-  type: "pb"
-  numberOfForecastsInEnsemble: *quantiles
-parameters:
-  - defs:
-      base_keys: &base_keys_2t
-        class: od
-        domain: g
-        expver: '0001'
-        levtype: sfc
-        date: 20231103
-        time: 00
-        param: 167
-        stream: enfo
-    ensemble:
-      operation: quantiles
-      num_quantiles: *quantiles
-    sources:
-      fdb:
-        fc:
-          - <<: *base_keys_2t
-            type: cf
-          - <<: *base_keys_2t
-            type: pf
-    windows:
-      ranges:
-        - [0, 6, 3]
-    target: "fileset:cascade_quantiles_{param}.grib"
-  - defs:
-      base_keys: &base_keys_tp
-        class: od
-        domain: g
-        expver: '0001'
-        levtype: sfc
-        date: 20231103
-        time: 00
-        param: 228
-        stream: enfo
-    ensemble:
-      operation: quantiles
-      num_quantiles: *quantiles
-    sources:
-      fdb:
-        fc:
-          - <<: *base_keys_tp
-            type: cf
-          - <<: *base_keys_tp
-            type: pf
-    windows:
-      operation: diff
-      include_start_step: True
-      ranges:
-        - [0, 6, 6]
-        - [3, 9, 6]
-    grib_set:
-      stepType: diff
-      paramId: 200228
-    target: "fileset:cascade_quantiles_{param}.grib"
-  - ensemble:
-      operation: quantiles
-      num_quantiles: *quantiles
-    sources:
-      fdb:
-        fc:
-          <<: *base_keys_tp
-          type: pf
-    windows:
-      ranges:
-        - [0, 0]
-    target: "fileset:cascade_quantiles_{param}.grib"
+- class: od
+  stream: enfo
+  type: pb
+  levtype: sfc
+  domain: g
+  param: "167"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 0
+  quantile: ['0:100', '25:100', '50:100', '75:100', '100:100']
+- class: od
+  stream: enfo
+  type: pb
+  levtype: sfc
+  domain: g
+  param: "167"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 3
+  quantile: ['0:100', '25:100', '50:100', '75:100', '100:100']
+- class: od
+  stream: enfo
+  type: pb
+  levtype: sfc
+  domain: g
+  param: "167"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 6
+  quantile: ['0:100', '25:100', '50:100', '75:100', '100:100']
+- class: od
+  stream: enfo
+  type: pb
+  levtype: sfc
+  domain: g
+  param: "200228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 0-6
+  quantile: ['0:100', '25:100', '50:100', '75:100', '100:100']
+- class: od
+  stream: enfo
+  type: pb
+  levtype: sfc
+  domain: g
+  param: "200228"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 3-9
+  quantile: ['0:100', '25:100', '50:100', '75:100', '100:100']
