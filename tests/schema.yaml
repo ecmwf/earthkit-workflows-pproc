@@ -76,10 +76,10 @@ config:
         - operation: sum
         - operation: scale
           value: 3600
-    "228/200189/200142/200143/200144/228216/200228":
+    "200189/200142/200143/200144/228216/200228":
       accumulations:
         step:
-          operation: diff
+          operation: difference
           include_start: true
   filter:type:
     pf/cf: 
@@ -126,7 +126,7 @@ config:
           accumulations:
             step:
               type: legacywindow
-              operation: diff
+              operation: difference
               include_start: true
         "132202":
           eps: -1e-4
@@ -139,7 +139,7 @@ config:
           accumulations:
             step:
               type: legacywindow
-              operation: diff
+              operation: difference
               include_start: true
           filter:stream:
             "*": {}
@@ -154,7 +154,7 @@ config:
           accumulations:
             step:
               type: legacywindow
-              operation: diff
+              operation: difference
               include_start: true
           threshold:
             comparison: ">="
@@ -164,7 +164,7 @@ config:
           accumulations:
             step:
               type: legacywindow
-              operation: diff
+              operation: difference
               include_start: true
           threshold:
             comparison: ">="
@@ -174,7 +174,7 @@ config:
           accumulations:
             step:
               type: legacywindow
-              operation: diff
+              operation: difference
               include_start: true
           threshold:
             comparison: ">="
@@ -184,7 +184,7 @@ config:
           accumulations:
             step:
               type: legacywindow
-              operation: diff
+              operation: difference
               include_start: true
           threshold:
             comparison: ">="
@@ -194,7 +194,7 @@ config:
           accumulations:
             step:
               type: legacywindow
-              operation: diff
+              operation: difference
               include_start: true
           threshold:
             comparison: ">="
@@ -206,7 +206,7 @@ config:
           accumulations:
             step:
               type: legacywindow
-              operation: diff
+              operation: difference
               include_start: true
           threshold:
             comparison: ">="
@@ -218,7 +218,7 @@ config:
           accumulations:
             step:
               type: legacywindow
-              operation: diff
+              operation: difference
               include_start: true
           threshold:
             comparison: ">="
@@ -230,7 +230,7 @@ config:
           accumulations:
             step:
               type: legacywindow
-              operation: diff
+              operation: difference
               include_start: true
           threshold:
             comparison: '<'
@@ -240,7 +240,8 @@ config:
           accumulations:
             step:
               type: legacywindow
-              operation: diffdailyrate
+              operation: difference_rate
+              factor: 0.041666666666666664
               include_start: true
           threshold:
             comparison: '<'
@@ -250,7 +251,8 @@ config:
           accumulations:
             step:
               type: legacywindow
-              operation: diffdailyrate
+              operation: difference_rate
+              factor: 0.041666666666666664
               include_start: true
           threshold:
             comparison: '>='
@@ -260,7 +262,8 @@ config:
           accumulations:
             step:
               type: legacywindow
-              operation: diffdailyrate
+              operation: difference_rate
+              factor: 0.041666666666666664
               include_start: true
           threshold:
             comparison: '>='
@@ -937,8 +940,8 @@ inputs:
       climatology: 
         inputs:
           request:
-            time: "00"
             stream: "efhs" 
+            time: "00"
         scheme: ecmwf-4days
     waef:
       filter:type:
@@ -972,8 +975,8 @@ inputs:
       climatology: 
         inputs:
           request:
+            stream: "wehs"
             time: "00"
-            stream: "wehs" 
         scheme: ecmwf-4days
     eefo:
       filter:type:
@@ -1019,8 +1022,8 @@ inputs:
       climatology: 
         inputs:
           request:
-            time: "00"
             stream: "eehs" 
+            time: "00"
         scheme: ecmwf-2days
     weef:
       filter:type:
@@ -1066,8 +1069,8 @@ inputs:
       climatology: 
         inputs:
           request:
-            time: "00"
             stream: "wees" 
+            time: "00"
         scheme: ecmwf-2days
     msmm: 
       filter:type:
@@ -1755,7 +1758,7 @@ inputs:
                     by: 12
         msmm/swmm:
           filter:param:
-            "34/139/151/164/165/166/167/168/168/229/230": 
+            "34/139/151/164/165/166/167/168/168/207/229/230": 
               forecast:
                 inputs:
                   derive_step: 
