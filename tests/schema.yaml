@@ -918,7 +918,7 @@ inputs:
                   type: "pf"
                 members: 
                   start: 1
-                  end: 5
+                  end: 50
         "cf/efic":
           forecast:
             inputs:
@@ -933,7 +933,7 @@ inputs:
                 type: "pf"
               members: 
                 start: 1
-                end: 5
+                end: 50
       climatology: 
         inputs:
           request:
@@ -953,7 +953,7 @@ inputs:
                   type: "pf"
                 members: 
                   start: 1
-                  end: 5
+                  end: 50
         "cf/efic":
           forecast:
             inputs:
@@ -968,7 +968,7 @@ inputs:
                 type: "pf"
               members: 
                 start: 1
-                end: 5
+                end: 50
       climatology: 
         inputs:
           request:
