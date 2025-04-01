@@ -129,6 +129,20 @@ class AnomalyConfig(EnsembleConfig):
             **self.stats,
         )
 
+def _translate_accum_op(accum: dict) -> str:
+    OPS = {
+        "aggregation": None, 
+        "difference": "diff", 
+        "maximum": "max",
+        "minimum": "min",
+        "mean": "mean",
+        "standard_deviation": "std",
+        "sum": "add",
+    }
+    operation = accum.setdefault("operation", "aggregation")
+    if operation not in OPS:
+        raise ValueError(f"Accumulation operation {operation} not supported")
+    return OPS[operation]
 
 def derive_config(request: dict, schema_config: dict) -> dict:
     ensemble_operation = {
@@ -155,7 +169,7 @@ def derive_config(request: dict, schema_config: dict) -> dict:
     # Populate coords in accumulations with values from inputs
     accums = schema_config.pop("accumulations", {})
     for dim, accum in accums.items():
-        accum.setdefault("operation", None)
+        accum["operation"] = _translate_accum_op(accum)
         values = inputs[0][dim]
         accum["coords"] = [values] if isinstance(values, (str, int)) else values
 
