@@ -11,6 +11,12 @@ config:
         - operation: norm
       interp_keys:
         vod2uv: true
+    "121/122/228026/228027":
+      filter:type:
+        em/es/pb:
+          accumulations:
+            step:
+              type: legacywindow
     "131068/131069":
       filter:type:
         ep:
@@ -1109,6 +1115,26 @@ inputs:
             inputs:
               request:
                 param: ["138", "155"]
+    "121/122":
+      filter:type:
+        em/es/pb:
+          forecast:
+            inputs:
+              request:  
+                param: "{param}"
+              derive_step:
+                type: default
+                by: 6
+    "228026/228027":
+      filter:type:
+        em/es/pb:
+          forecast:
+            inputs:
+              request:  
+                param: "{param}"
+              derive_step:
+                type: default
+                by: 3
     131020/131021/131022/131023/131024/131025/133093/133094/133095/133096/133097/133098:
       filter:type:
         ep:

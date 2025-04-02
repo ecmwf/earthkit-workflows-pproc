@@ -1,6 +1,5 @@
-from cascade.graph import Graph, deduplicate_nodes
-
-from pproc.config.utils import squeeze, expand
+from earthkit.workflows.graph import Graph, deduplicate_nodes
+from pproc.config.utils import expand, squeeze
 
 from ppcascade.fluent import from_source
 from ppcascade.templates import derive_template

@@ -1,9 +1,9 @@
 import numpy as np
-import xarray as xr
 import pytest
+import xarray as xr
+from earthkit.workflows import Graph, deduplicate_nodes
+from earthkit.workflows.fluent import Node, Payload
 
-from cascade.graph import Graph, deduplicate_nodes
-from cascade.fluent import Node, Payload
 from ppcascade.fluent import Action
 
 

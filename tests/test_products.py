@@ -1,7 +1,7 @@
 import os
-import yaml
 
 import pytest
+import yaml
 
 from ppcascade import products
 

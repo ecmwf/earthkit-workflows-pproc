@@ -2,14 +2,19 @@ import shutil
 from io import BytesIO
 
 import mir
-from meters import ResourceMeter
 from earthkit.data import FieldList, settings
+from earthkit.data.readers.grib.metadata import StandAloneGribMetadata
 from earthkit.data.sources import Source, from_source
 from earthkit.data.sources.file import FileSource
 from earthkit.data.sources.stream import StreamSource
-from earthkit.data.readers.grib.metadata import StandAloneGribMetadata
-from pproc.common.io import split_location
-from pproc.common.io import FileSetTarget, FileTarget, target_from_location, write_grib
+from meters import ResourceMeter
+from pproc.common.io import (
+    FileSetTarget,
+    FileTarget,
+    split_location,
+    target_from_location,
+    write_grib,
+)
 
 # Set cache policy to "temporary" to avoid "database is locked" errors when
 # for wind when executing across multiple workers

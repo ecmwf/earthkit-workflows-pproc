@@ -3,12 +3,10 @@ import inspect
 from typing import Any
 
 import numpy as np
-from cascade.backends.earthkit import FieldListBackend
-from cascade import fluent
+from earthkit.workflows import fluent
+from earthkit.workflows.backends.earthkit import FieldListBackend
 
-from ppcascade.utils import io
-from ppcascade.utils import math
-from ppcascade.utils import grib
+from ppcascade.utils import grib, io, math
 from ppcascade.utils.request import MultiSourceRequest, Request
 
 

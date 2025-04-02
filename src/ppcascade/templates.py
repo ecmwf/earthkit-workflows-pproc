@@ -1,9 +1,10 @@
-from typing import Optional
 from dataclasses import dataclass
+from typing import Optional
 
-from pproc.schema.schema import Schema
+from earthkit.workflows.fluent import Payload
 from pproc.config.preprocessing import PreprocessingConfig
-from cascade.fluent import Payload
+from pproc.schema.schema import Schema
+
 from ppcascade.fluent import Action
 from ppcascade.utils import grib
 
@@ -129,10 +130,11 @@ class AnomalyConfig(EnsembleConfig):
             **self.stats,
         )
 
+
 def _translate_accum_op(accum: dict) -> str:
     OPS = {
-        "aggregation": None, 
-        "difference": "diff", 
+        "aggregation": None,
+        "difference": "diff",
         "maximum": "max",
         "minimum": "min",
         "mean": "mean",
@@ -143,6 +145,7 @@ def _translate_accum_op(accum: dict) -> str:
     if operation not in OPS:
         raise ValueError(f"Accumulation operation {operation} not supported")
     return OPS[operation]
+
 
 def derive_config(request: dict, schema_config: dict) -> dict:
     ensemble_operation = {

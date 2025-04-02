@@ -1,4 +1,4 @@
-from cascade.fluent import Node, Payload
+from earthkit.workflows.fluent import Node, Payload
 
 from ppcascade.entry import parser
 

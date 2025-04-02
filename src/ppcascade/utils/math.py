@@ -1,17 +1,16 @@
 import array_api_compat
-from cascade.backends.earthkit import (
-    Metadata,
-    resolve_metadata,
-    comp_str2func,
-    new_fieldlist,
-)
+import earthkit.meteo.solar
 from earthkit.data import FieldList
 from earthkit.meteo.extreme import array as extreme
 from earthkit.meteo.stats import array as stats
-import earthkit.meteo.solar
+from earthkit.workflows.backends.earthkit import (
+    Metadata,
+    comp_str2func,
+    new_fieldlist,
+    resolve_metadata,
+)
 from meters import ResourceMeter
 from pproc.thermo.indices import ComputeIndices
-
 
 from ppcascade.utils import grib
 from ppcascade.utils.patch import PatchModule
