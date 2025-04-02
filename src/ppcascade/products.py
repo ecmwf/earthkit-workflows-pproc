@@ -1,7 +1,7 @@
 import argparse
 
-from cascade.fluent import Payload
-from cascade.graph import Graph, deduplicate_nodes
+from earthkit.workflows.fluent import Payload
+from earthkit.workflows.graph import Graph, deduplicate_nodes
 
 from .config import ClusterConfig, Config
 from .fluent import from_source

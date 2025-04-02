@@ -2,7 +2,7 @@ import functools
 import inspect
 
 import numpy as np
-from cascade import backends, fluent
+from earthkit.workflows import backends, fluent
 
 from .backends import fieldlist
 from .utils import grib

@@ -3,7 +3,7 @@ from typing import TypeAlias
 
 import array_api_compat
 import numpy as np
-from cascade.backends import num_args
+from earthkit.workflows.backends import num_args
 from earthkit.data import FieldList, SimpleFieldList
 from earthkit.data.readers.grib.metadata import StandAloneGribMetadata
 from earthkit.meteo.extreme import array as extreme

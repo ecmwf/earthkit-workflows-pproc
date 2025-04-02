@@ -1,5 +1,5 @@
 import pytest
-from cascade import backends
+from earthkit.workflows import backends
 
 
 @pytest.mark.parametrize(

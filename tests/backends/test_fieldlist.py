@@ -8,7 +8,7 @@ from earthkit.data import FieldList, SimpleFieldList
 from earthkit.data.core.metadata import RawMetadata
 from generic_tests import *
 
-from cascade import backends
+from earthkit.workflows import backends
 from ppcascade.backends.fieldlist import SimpleFieldListBackend
 
 
