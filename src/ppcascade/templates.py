@@ -190,9 +190,11 @@ def derive_config(request: dict, schema_config: dict) -> dict:
     return config
 
 
-def derive_template(request: dict, pproc_schema: str) -> Action:
+def derive_template(
+    request: dict, pproc_schema: str, inputs: Optional[list[dict]] = None
+) -> Action:
     schema = Schema.from_file(pproc_schema)
-    schema_config = schema.config_from_output(request)
+    schema_config = schema.config_from_output(request, inputs=inputs)
     templates = {
         "pproc-ensms": EnsembleConfig,
         "pproc-quantiles": EnsembleConfig,
@@ -210,5 +212,8 @@ def derive_template(request: dict, pproc_schema: str) -> Action:
 
 
 def from_request(request: dict, pproc_schema: str, **sources: Action) -> Action:
-    config = derive_template(request, pproc_schema)
+    inputs = []
+    for source in sources:
+        inputs.append({k: list(source.coords[k].values) for k in source.coords.keys()})
+    config = derive_template(request, pproc_schema, inputs=inputs)
     return config.action(**sources)
