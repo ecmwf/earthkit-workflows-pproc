@@ -695,16 +695,16 @@ def _accum_transform(
         return action.select({dim: coords})
 
     metadata = {} if metadata is None else metadata.copy()
-    window_metadata = grib.window(operation, coords, include_start)
-    metadata.update(window_metadata)
+    if dim == "step":
+        metadata.update(grib.window(operation, coords, include_start))
 
     if deaccumulate:
-        window_action = action.select({dim: coords[:-1]})
-        window_action = window_action.subtract(action.select({dim: coords[1:]}))
+        accum_action = action.select({dim: coords[:-1]})
+        accum_action = accum_action.subtract(action.select({dim: coords[1:]}))
     else:
-        window_action = action.select({dim: coords if include_start else coords[1:]})
+        accum_action = action.select({dim: coords if include_start else coords[1:]})
 
-    window_action = window_action._wrapped_reduction(
+    accum_action = accum_action._wrapped_reduction(
         operation,
         dim=dim,
         batch_size=batch_size,
@@ -712,8 +712,8 @@ def _accum_transform(
         **kwargs,
     )
 
-    window_action._add_dimension(dim, f"{coords[0]}-{coords[-1]}")
-    return window_action
+    accum_action._add_dimension(dim, f"{coords[0]}-{coords[-1]}")
+    return accum_action
 
 
 def from_source(
