@@ -24,14 +24,14 @@ class Action(fluent.Action):
         if not batched or metadata is None:
             return op(
                 dim,
-                batch_size,
-                keep_dim,
+                batch_size=batch_size,
+                keep_dim=keep_dim,
                 backend_kwargs={"metadata": metadata},
             )
 
         # If batched, add additional node for setting window operation metadata. Doing this in a separate tasks
         # allows batched operations for overlapping windows to be identified and only computed once
-        batched_action = op(dim, batch_size, keep_dim)
+        batched_action = op(dim, batch_size=batch_size, keep_dim=keep_dim)
         return batched_action.map(
             fluent.Payload(backends.set_metadata, [fluent.Node.input_name(0), metadata])
         )
@@ -304,8 +304,10 @@ class Action(fluent.Action):
         """
         if metadata is None:
             metadata = {}
-        mean = self.mean(dim, batch_size, metadata={"type": "em", **metadata})
-        std = self.std(dim, batch_size, metadata={"type": "es", **metadata})
+        mean = self.mean(
+            dim, batch_size=batch_size, metadata={"type": "em", **metadata}
+        )
+        std = self.std(dim, batch_size=batch_size, metadata={"type": "es", **metadata})
         res = mean.join(std, new_dim)
         return res
 
@@ -339,7 +341,11 @@ class Action(fluent.Action):
                 float(value),
             ),
         )
-        return self.map(payload).multiply(100).mean(dim, batch_size, metadata=metadata)
+        return (
+            self.map(payload)
+            .multiply(100)
+            .mean(dim, batch_size=batch_size, metadata=metadata)
+        )
 
     def anomaly(
         self,
@@ -376,7 +382,7 @@ class Action(fluent.Action):
                 fluent.Payload(backends.norm, (fluent.Node.input_name(0),), kwargs)
             )
         else:
-            ret = self.reduce(fluent.Payload(backends.norm, kwargs=kwargs), dim)
+            ret = self.reduce(fluent.Payload(backends.norm, kwargs=kwargs), dim=dim)
         return ret
 
     def _wrapped_reduction(
@@ -404,7 +410,7 @@ class Action(fluent.Action):
             if metadata is not None:
                 kwargs.setdefault("metadata", {}).update(metadata)
             operation = fluent.Payload(getattr(backends, operation), kwargs=kwargs)
-        return self.reduce(operation, dim, batch_size)
+        return self.reduce(operation, dim=dim, batch_size=batch_size)
 
     def param_operation(
         self,

@@ -150,7 +150,5 @@ def retrieve_single_source(request: dict, **kwargs) -> SimpleFieldList:
         ret_sources = file_retrieve(path, req)
     else:
         raise NotImplementedError(f"Source {source} not supported.")
-    assert (
-        len(ret_sources) > 0
-    ), f"No data retrieved from {source} for request {req}"
+    assert len(ret_sources) > 0, f"No data retrieved from {source} for request {req}"
     return ret_sources
