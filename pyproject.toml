@@ -1,10 +1,15 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=78", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pproc-cascade"
-version = "0.0.1"
+name = "pproc-cascade" # TODO when changing the name, also change `tool.setuptools_scm.write_to` !
+description = "TODO"
+authors = [
+  { name = "European Centre for Medium-Range Weather Forecasts (ECMWF)", email = "software.support@ecmwf.int" },
+]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = [
     "earthkit-meteo>=0.1.1",
@@ -14,11 +19,14 @@ dependencies = [
     "cython",
     "scipy",
     "code-meters",
-    "earthkit-data==0.11.3",
-    "cascade-python @ git+ssh://git@github.com/ecmwf/cascade.git",
-    "pyfdb @ git+https://github.com/ecmwf/pyfdb.git@master",
+    "earthkit-data",
+    "earthkit-workflows",
+    "pyfdb",
+    # "fdb5lib", # TODO enable once stably published
     "pproc @ git+ssh://git@github.com/ecmwf/pproc.git@1.2.0"
 ]
+# version provided via setuptools_scm module, which derives it from git tag
+dynamic = ["version", "readme"]
 
 [project.optional-dependencies]
 tests = ["pytest"]
@@ -26,6 +34,16 @@ lint = ["black", "isort", "flake8"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.dynamic]
+readme = {file = ["readme.md"], content-type = "text/markdown"}
+
+[tool.setuptools_scm]
+write_to = "src/ppcascade/_version.py"
+write_to_template = '''# Do not change! Do not track in version control!
+__version__ = "{version}"
+'''
+local_scheme = "no-local-version"
 
 [tool.isort]
 profile = "black"
