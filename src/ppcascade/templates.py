@@ -211,9 +211,14 @@ def derive_template(
     return templates[entrypoint](**config)
 
 
-def from_request(request: dict, pproc_schema: str, **sources: Action) -> Action:
-    inputs = []
-    for source in sources:
-        inputs.append({k: list(source.coords[k].values) for k in source.coords.keys()})
-    config = derive_template(request, pproc_schema, inputs=inputs)
-    return config.action(**sources)
+def from_request(
+    request: dict,
+    pproc_schema: str,
+    preprocessing_dim: str = "param",
+    ensemble_dim: str = "number",
+    **sources: Action,
+) -> Action:
+    config = derive_template(request, pproc_schema)
+    return config.action(
+        **sources, preprocessing_dim=preprocessing_dim, ensemble_dim=ensemble_dim
+    )
