@@ -350,19 +350,15 @@ class Action(fluent.Action):
         batch_size: int = 0,
         metadata: dict | None = None,
     ) -> "Action":
-        if metadata is not None and int(metadata.get("edition", 1)) == 1:
-            metadata = metadata.copy()
-            metadata.update(
-                grib.threshold(
-                    comparison,
-                    float(value),
-                    (
-                        float(local_scale_factor)
-                        if local_scale_factor is not None
-                        else None
-                    ),
-                )
+        metadata = {} if metadata is None else metadata.copy()
+        metadata.update(
+            grib.threshold(
+                metadata.get("edition", 1),
+                comparison,
+                value,
+                local_scale_factor,
             )
+        )
         payload = fluent.Payload(
             math.threshold,
             (
@@ -396,12 +392,17 @@ class Action(fluent.Action):
         new_dim: str = "quantile",
         metadata: dict | None = None,
     ) -> "Action":
-        quantiles = (
-            quantiles
-            if isinstance(quantiles, list)
-            else np.linspace(0.0, 1.0, int(quantiles) + 1)
-        )
-        params = [(x, new_dim, metadata) for x in quantiles]
+        if isinstance(quantiles, int):
+            total_number = quantiles
+            q_numbers = range(0, quantiles + 1)
+        else:
+            even_spacing = np.all(np.diff(quantiles) == quantiles[1] - quantiles[0])
+            total_number = len(quantiles) - 1 if even_spacing else 100
+            q_numbers = (
+                range(0, len(quantiles)) if even_spacing else map(int, quantiles * 100)
+            )
+
+        params = [(x, total_number, new_dim, metadata) for x in q_numbers]
         ret = self.concatenate(dim).transform(_quantiles_transform, params, new_dim)
         return ret
 
@@ -668,14 +669,16 @@ def _efi_window_transform(
     return ret
 
 
-def _quantiles_transform(action, quantile: float, new_dim: str, metadata: dict | None):
+def _quantiles_transform(
+    action, q_number: int, total_number: int, new_dim: str, metadata: dict | None
+):
     payload = fluent.Payload(
         math.quantiles,
-        (fluent.Node.input_name(0), quantile),
+        (fluent.Node.input_name(0), q_number, total_number),
         {"metadata": metadata},
     )
     new_quantile = action.map(payload)
-    new_quantile._add_dimension(new_dim, quantile)
+    new_quantile._add_dimension(new_dim, q_number / total_number)
     return new_quantile
 
 

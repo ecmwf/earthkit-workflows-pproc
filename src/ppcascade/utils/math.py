@@ -43,10 +43,11 @@ def efi(
         xp = array_api_compat.array_namespace(ens.values, clim.values)
         with PatchModule(extreme, "numpy", xp):
             res = extreme.efi(clim.values, ens.values, eps)
+        resolved_metadata = resolve_metadata(metadata, clim, ens)
         return new_fieldlist(
             res,
             [ens[0].metadata()],
-            {**resolve_metadata(metadata, clim, ens), **grib.efi(clim, ens)},
+            {**resolved_metadata, **grib.efi(clim, ens, resolved_metadata)},
         )
 
 
@@ -62,27 +63,33 @@ def sot(
         xp = array_api_compat.array_namespace(ens.values, clim.values)
         with PatchModule(extreme, "numpy", xp):
             res = extreme.sot(clim.values, ens.values, number, eps)
+        resolved_metadata = resolve_metadata(metadata, clim, ens)
         return new_fieldlist(
             res,
             [ens[0].metadata()],
             {
-                **resolve_metadata(metadata, clim, ens),
-                **grib.sot(clim, ens, number),
+                **resolved_metadata,
+                **grib.sot(clim, ens, resolved_metadata, number),
             },
         )
 
 
 def quantiles(
-    ens: FieldList, quantile: float, *, metadata: Metadata = None
+    ens: FieldList, q_number: int, total_number: int, *, metadata: Metadata = None
 ) -> FieldList:
     with ResourceMeter("QUANTILES"):
         xp = array_api_compat.array_namespace(ens.values)
+        quantile = q_number / total_number
         with PatchModule(stats, "numpy", xp):
             res = list(stats.iter_quantiles(ens.values, [quantile], method="numpy"))[0]
+        resolved_metadata = resolve_metadata(metadata, ens)
         return new_fieldlist(
             res,
             [ens[0].metadata()],
-            {**resolve_metadata(metadata, ens), "perturbationNumber": quantile},
+            {
+                **resolved_metadata,
+                **grib.quantiles(ens, resolved_metadata, q_number, total_number),
+            },
         )
 
 

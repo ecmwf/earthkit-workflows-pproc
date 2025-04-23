@@ -65,7 +65,11 @@ def test_from_request(requests, expected_num_nodes):
         ).concatenate(dim="type", keep_dim=True)
         graph += (
             from_request(
-                req, f"{ROOT_DIR}/schema.yaml", ensemble_dim="type", forecast=source
+                req,
+                f"{ROOT_DIR}/schema.yaml",
+                ensemble_dim="type",
+                forecast=source,
+                metadata={"edition": 2},
             )
             .write("null:")
             .graph()

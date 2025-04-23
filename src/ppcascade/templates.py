@@ -147,7 +147,9 @@ def _translate_accum_op(accum: dict) -> str:
     return OPS[operation]
 
 
-def derive_config(request: dict, schema_config: dict) -> dict:
+def derive_config(
+    request: dict, schema_config: dict, metadata: Optional[dict] = None
+) -> dict:
     ensemble_operation = {
         "em": "mean",
         "es": "std",
@@ -187,11 +189,16 @@ def derive_config(request: dict, schema_config: dict) -> dict:
         },
     }
     config["stats"].setdefault("metadata", {}).setdefault("type", request["type"])
+    if metadata:
+        config["stats"]["metadata"].update(metadata)
     return config
 
 
 def derive_template(
-    request: dict, pproc_schema: str, inputs: Optional[list[dict]] = None
+    request: dict,
+    pproc_schema: str,
+    inputs: Optional[list[dict]] = None,
+    metadata: Optional[dict] = None,
 ) -> Action:
     schema = Schema.from_file(pproc_schema)
     schema_config = schema.config_from_output(request, inputs=inputs)
@@ -207,7 +214,7 @@ def derive_template(
     entrypoint = schema_config["entrypoint"]
     if entrypoint not in templates:
         raise ValueError(f"Schema {entrypoint} not supported")
-    config = derive_config(request, schema_config)
+    config = derive_config(request, schema_config, metadata)
     return templates[entrypoint](**config)
 
 
@@ -216,9 +223,10 @@ def from_request(
     pproc_schema: str,
     preprocessing_dim: str = "param",
     ensemble_dim: str = "number",
+    metadata: Optional[dict] = None,
     **sources: Action,
 ) -> Action:
-    config = derive_template(request, pproc_schema)
+    config = derive_template(request, pproc_schema, metadata=metadata)
     return config.action(
         **sources, preprocessing_dim=preprocessing_dim, ensemble_dim=ensemble_dim
     )
