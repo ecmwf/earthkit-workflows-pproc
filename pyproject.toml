@@ -14,9 +14,9 @@ dependencies = [
     "cython",
     "scipy",
     "code-meters",
-    # "earthkit-workflows", # TODO enable once published
+    "earthkit-workflows @ git+ssh://git@github.com/ecmwf/earthkit-workflows.git",
     "pyfdb",
-    "pproc @ git+ssh://git@github.com/ecmwf/pproc.git@1.2.0"
+    "pproc @ git+ssh://git@github.com/ecmwf/pproc.git@feature/io-requests"
 ]
 
 [project.optional-dependencies]
