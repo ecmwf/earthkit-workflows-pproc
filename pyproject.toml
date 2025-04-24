@@ -14,7 +14,7 @@ dependencies = [
     "cython",
     "scipy",
     "code-meters",
-    "earthkit-workflows @ git+ssh://git@github.com/ecmwf/earthkit-workflows.git",
+    "earthkit-workflows @ git+https://github.com/ecmwf/earthkit-workflows",
     "pyfdb",
     "pproc @ git+ssh://git@github.com/ecmwf/pproc.git@feature/io-requests"
 ]
