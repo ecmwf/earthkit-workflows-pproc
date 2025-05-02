@@ -13,7 +13,11 @@ from ppcascade.utils.request import MultiSourceRequest, Request
 class Action(fluent.Action):
     _THERMAL_CONFIG = {
         "utci": {"operation": math.calc_utci, "params": ["2t", "2d", "10si", "mrt"]},
-        "10si": {"operation": "norm", "params": ["10u", "10v"]},
+        "10si": {
+            "operation": "norm",
+            "metadata": {"paramId": 207},
+            "params": ["10u", "10v"],
+        },
         "mrt": {
             "operation": math.calc_mrt,
             "params": ["uvcossza", "dsrp", "ssrd", "fdir", "strd", "str", "ssr"],
@@ -485,17 +489,25 @@ class Action(fluent.Action):
         self, param: str, dim: str = "param", metadata: dict | None = None
     ) -> "Action":
         config = self._THERMAL_CONFIG[param]
-        for input in config["params"]:
-            if input not in self.nodes.coords[dim] and input in self._THERMAL_CONFIG:
-                dependency = self.thermal_index(input, dim=dim, metadata=metadata)
-                dependency._add_dimension(dim, input)
-                self = self.join(dependency, dim)
+        new_action = self
+        for inp in config["params"]:
+            if (
+                inp not in new_action.nodes.coords[dim]
+                and inp in new_action._THERMAL_CONFIG
+            ):
+                dependency = new_action.thermal_index(inp, dim=dim, metadata=metadata)
+                dependency._add_dimension(dim, inp)
+                new_action = new_action.join(dependency, dim)
         try:
-            selection = self.sel(param=(config["params"]))
+            selection = new_action.sel(param=(config["params"]))
         except KeyError:
-            selection = self
+            selection = new_action
+        config_metadata = config.get("metadata", {})
+        new_metadata = (
+            config_metadata if not metadata else {**metadata, **config_metadata}
+        )
         ret = selection._wrapped_reduction(
-            config["operation"], dim=dim, metadata=metadata
+            config["operation"], dim=dim, metadata=new_metadata
         )
         return ret
 
