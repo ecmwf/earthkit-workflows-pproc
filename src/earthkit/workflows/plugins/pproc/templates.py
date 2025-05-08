@@ -20,7 +20,6 @@ from earthkit.workflows.plugins.pproc.utils import grib
 
 @dataclass
 class StatsConfig:
-    dim: str
     operation: Optional[str]
     metadata: dict
 
@@ -136,7 +135,8 @@ class AnomalyConfig(EnsembleConfig):
             )
         return action.ensemble_operation(
             dim=ensemble_dim,
-            **self.stats,
+            operation=self.stats.operation,
+            metadata={**self.stats.metadata, **clim_headers},
         )
 
 
