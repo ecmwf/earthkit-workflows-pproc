@@ -10,6 +10,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from earthkit.workflows.backends.earthkit import FieldListBackend
 from earthkit.workflows.fluent import Payload
 from pproc.config.preprocessing import PreprocessingConfig
 from pproc.schema.schema import Schema
@@ -19,17 +20,11 @@ from earthkit.workflows.plugins.pproc.utils import grib
 
 
 @dataclass
-class StatsConfig:
-    operation: Optional[str]
-    metadata: dict
-
-
-@dataclass
 class EnsembleConfig:
     inputs: list[dict]
     preprocessing: PreprocessingConfig
     accumulations: dict[str, dict]
-    stats: StatsConfig
+    stats: dict
 
     def action(
         self, forecast: Action, preprocessing_dim="param", ensemble_dim="number"
@@ -113,7 +108,7 @@ class AnomalyConfig(EnsembleConfig):
         preprocessing_dim="param",
         ensemble_dim="number",
     ) -> Action:
-        clim_headers = climatology.select({"type": "em"}, drop=True).map(
+        clim_headers = climatology.iselect({"type": 0, "step": 0}, drop=True).map(
             Payload(grib.anomaly_clim)
         )
         action = forecast
@@ -133,10 +128,14 @@ class AnomalyConfig(EnsembleConfig):
                 include_start=accumulation.get("include_start", False),
                 deaccumulate=accumulation.get("deaccumulate", False),
             )
-        return action.ensemble_operation(
+        stats = action.ensemble_operation(
             dim=ensemble_dim,
-            operation=self.stats.operation,
-            metadata={**self.stats.metadata, **clim_headers},
+            **self.stats,
+        )
+        if self.stats["metadata"].get("edition", 1) == 1:
+            return stats
+        return stats.join(clim_headers, "**datatype**", match_coord_values=True).reduce(
+            FieldListBackend.set_metadata, dim="**datatype**"
         )
 
 
