@@ -8,15 +8,15 @@
 # nor does it submit to any jurisdiction.
 
 import os
-import yaml
-import pytest
 
-from pproc.config.utils import expand, squeeze
+import pytest
+import yaml
 from earthkit.workflows.graph import Graph, deduplicate_nodes
+from pproc.config.utils import expand, squeeze
 
 from earthkit.workflows.plugins.pproc.fluent import from_source
-from earthkit.workflows.plugins.pproc.utils.request import Request
 from earthkit.workflows.plugins.pproc.templates import derive_template, from_request
+from earthkit.workflows.plugins.pproc.utils.request import Request
 
 ROOT_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)))
 

@@ -12,9 +12,9 @@ import inspect
 from typing import Any
 
 import numpy as np
-from earthkit.workflows import fluent
 from earthkit.workflows.backends.earthkit import FieldListBackend
 
+from earthkit.workflows import fluent
 from earthkit.workflows.plugins.pproc.utils import grib, io, math
 from earthkit.workflows.plugins.pproc.utils.request import MultiSourceRequest, Request
 

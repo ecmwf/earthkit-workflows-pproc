@@ -7,12 +7,11 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-import numpy as np
 import pytest
 import xarray as xr
-from earthkit.workflows import Graph, deduplicate_nodes
 from earthkit.workflows.fluent import Node, Payload
 
+from earthkit.workflows import Graph, deduplicate_nodes
 from earthkit.workflows.plugins.pproc.fluent import Action
 
 
@@ -40,6 +39,7 @@ def test_thermal(inputs, nnodes):
         graph += new_action.graph()
     graph = deduplicate_nodes(graph)
     from earthkit.workflows.visualise import visualise
+
     visualise(graph, "test.html")
     nodes = list(graph.nodes())
     assert len(nodes) == nnodes

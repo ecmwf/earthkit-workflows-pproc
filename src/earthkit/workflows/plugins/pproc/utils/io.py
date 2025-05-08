@@ -104,7 +104,7 @@ def _transform_request(request: dict, step_type: type = str):
         paramId = int(request["param"])
         del request["param"]
         request["paramId"] = paramId
-    except:
+    except ValueError:
         pass
     if request.get("date", None) is not None:
         request["date"] = int(request["date"])
