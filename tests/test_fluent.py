@@ -1,10 +1,19 @@
+# (C) Copyright 2024- ECMWF.
+#
+# This software is licensed under the terms of the Apache Licence Version 2.0
+# which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#
+# In applying this licence, ECMWF does not waive the privileges and immunities
+# granted to it by virtue of its status as an intergovernmental organisation
+# nor does it submit to any jurisdiction.
+
 import numpy as np
 import pytest
 import xarray as xr
 from earthkit.workflows import Graph, deduplicate_nodes
 from earthkit.workflows.fluent import Node, Payload
 
-from ppcascade.fluent import Action
+from earthkit.workflows.plugins.pproc.fluent import Action
 
 
 @pytest.mark.parametrize(
@@ -30,5 +39,7 @@ def test_thermal(inputs, nnodes):
         new_action = action.sel(param=inputs[index]).thermal_index(param)
         graph += new_action.graph()
     graph = deduplicate_nodes(graph)
+    from earthkit.workflows.visualise import visualise
+    visualise(graph, "test.html")
     nodes = list(graph.nodes())
     assert len(nodes) == nnodes

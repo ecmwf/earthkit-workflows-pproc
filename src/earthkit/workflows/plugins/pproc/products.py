@@ -1,9 +1,18 @@
+# (C) Copyright 2024- ECMWF.
+#
+# This software is licensed under the terms of the Apache Licence Version 2.0
+# which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#
+# In applying this licence, ECMWF does not waive the privileges and immunities
+# granted to it by virtue of its status as an intergovernmental organisation
+# nor does it submit to any jurisdiction.
+
 from earthkit.workflows.graph import Graph, deduplicate_nodes
 from pproc.config.utils import expand, squeeze
 
-from ppcascade.fluent import from_source
-from ppcascade.templates import derive_template
-from ppcascade.utils.request import Request
+from earthkit.workflows.plugins.pproc.fluent import from_source
+from earthkit.workflows.plugins.pproc.templates import derive_template
+from earthkit.workflows.plugins.pproc.utils.request import Request
 
 
 def ensemble(

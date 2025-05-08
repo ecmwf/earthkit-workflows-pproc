@@ -1,3 +1,12 @@
+# (C) Copyright 2024- ECMWF.
+#
+# This software is licensed under the terms of the Apache Licence Version 2.0
+# which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#
+# In applying this licence, ECMWF does not waive the privileges and immunities
+# granted to it by virtue of its status as an intergovernmental organisation
+# nor does it submit to any jurisdiction.
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -5,8 +14,8 @@ from earthkit.workflows.fluent import Payload
 from pproc.config.preprocessing import PreprocessingConfig
 from pproc.schema.schema import Schema
 
-from ppcascade.fluent import Action
-from ppcascade.utils import grib
+from earthkit.workflows.plugins.pproc.fluent import Action
+from earthkit.workflows.plugins.pproc.utils import grib
 
 
 @dataclass
