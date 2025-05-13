@@ -2,11 +2,19 @@ import shutil
 from io import BytesIO
 
 import mir
-from earthkit.data import SimpleFieldList, settings
+from earthkit.data import FieldList, settings
+from earthkit.data.readers.grib.metadata import StandAloneGribMetadata
 from earthkit.data.sources import Source, from_source
 from earthkit.data.sources.file import FileSource
 from earthkit.data.sources.stream import StreamSource
-from pproc.common.io import split_location
+from meters import ResourceMeter
+from pproc.common.io import (
+    FileSetTarget,
+    FileTarget,
+    split_location,
+    target_from_location,
+    write_grib,
+)
 
 # Set cache policy to "temporary" to avoid "database is locked" errors when
 # for wind when executing across multiple workers
@@ -118,15 +126,7 @@ def file_retrieve(path: str, request: dict) -> Source:
     return file_ds
 
 
-def retrieve(request: dict | list[dict], **kwargs):
-    if isinstance(request, dict):
-        func = retrieve_single_source
-    else:
-        func = retrieve_multi_sources
-    return func(request, **kwargs)
-
-
-def retrieve_multi_sources(requests: list[dict], **kwargs) -> SimpleFieldList:
+def retrieve_multi_sources(requests: list[dict], **kwargs) -> FieldList:
     ret = None
     for req in requests:
         try:
@@ -138,7 +138,7 @@ def retrieve_multi_sources(requests: list[dict], **kwargs) -> SimpleFieldList:
     return ret
 
 
-def retrieve_single_source(request: dict, **kwargs) -> SimpleFieldList:
+def retrieve_single_source(request: dict, **kwargs) -> FieldList:
     req = request.copy()
     source = req.pop("source")
     if source == "fdb":
@@ -150,7 +150,35 @@ def retrieve_single_source(request: dict, **kwargs) -> SimpleFieldList:
         ret_sources = file_retrieve(path, req)
     else:
         raise NotImplementedError(f"Source {source} not supported.")
-    assert (
-        len(ret_sources) > 0
-    ), f"No data retrieved from {source} for request {req}"
+    assert len(ret_sources) > 0, f"No data retrieved from {source} for request {req}"
     return ret_sources
+
+
+def retrieve(request: dict | list[dict], **kwargs):
+    with ResourceMeter(f"RETRIEVE {request}, {kwargs}"):
+        if isinstance(request, dict):
+            res = retrieve_single_source(request, **kwargs)
+        else:
+            res = retrieve_multi_sources(request, **kwargs)
+        ret = FieldList.from_array(
+            res.values,
+            [StandAloneGribMetadata(metadata._handle) for metadata in res.metadata()],
+        )
+        return ret
+
+
+def write(data: FieldList, loc, metadata: dict | None = None):
+    if loc == "null:":
+        return
+    target = target_from_location(loc)
+    if isinstance(target, (FileTarget, FileSetTarget)):
+        # Allows file to be appended on each write call
+        target.enable_recovery()
+    assert len(data) == 1, f"Expected single field, received {len(data)}"
+
+    template = data.metadata()[0]
+    if metadata is not None:
+        template = template.override(metadata)
+
+    with ResourceMeter(f"WRITE {loc}"):
+        write_grib(target, template._handle, data[0].values)

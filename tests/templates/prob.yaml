@@ -1,237 +1,140 @@
-out_keys:
+- class: od
+  stream: enfo
   type: ep
-  localDefinitionNumber: 5
-  bitsPerValue: 8
-members: 5
-parameters:
-  - target: "fileset:cascade_prob_{param}.grib"
-    ensemble:
-      operation: threshold_prob
-      comparison: ">="
-      value: 0.001
-      local_scale_factor: 3
-    windows:
-      operation: 'diff'
-      include_start_step: True
-      ranges:
-        - [0, 24, 24]
-        - [12, 36, 24]        
-    grib_set:
-      timeRangeIndicator: 5
-      stepType: diff 
-      paramId: 131060
-    sources:
-      fdb:
-        fc:
-          class: od
-          stream: enfo
-          type: pf
-          levtype: sfc
-          domain: g
-          param: 228
-          date: 20230914
-          time: 12
-          expver: "0001"
-  - target: "fileset:cascade_prob_{param}.grib"
-    ensemble:
-      operation: threshold_prob
-      comparison: ">="
-      value: 0.005
-      local_scale_factor: 3
-    windows:
-      operation: 'diff'
-      include_start_step: True
-      ranges:
-        - [0, 24, 24]
-        - [12, 36, 24]        
-    grib_set:
-      timeRangeIndicator: 5
-      stepType: diff 
-      paramId: 131061
-    sources:
-      fdb:
-        fc:
-          class: od
-          stream: enfo
-          type: pf
-          levtype: sfc
-          domain: g
-          param: 228
-          date: 20230914
-          time: 12
-          expver: "0001"
-  - target: "fileset:cascade_prob_{param}.grib"
-    ensemble:
-      operation: threshold_prob
-      comparison: ">="
-      value: 0.025
-    windows:
-      operation: 'diff'
-      include_start_step: True
-      ranges:
-        - [0, 24, 24]
-        - [12, 36, 24]        
-    grib_set:
-      stepType: accum
-      stepRange: 0-0
-      edition: 2
-      scaleFactorOfLowerLimit: 0
-      probabilityType: 3
-      typeOfGeneratingProcess: 5
-      indicatorOfUnitForTimeIncrement: 1
-      timeIncrement: 12
-      packingType: grid_ccsds
-      scaleFactorOfUpperLimit: MISSING
-      scaledValueOfUpperLimit: MISSING
-      paramId: 131098
-    sources:
-      fdb:
-        fc:
-          class: od
-          stream: enfo
-          type: pf
-          levtype: sfc
-          domain: g
-          param: 228
-          date: 20230914
-          time: 12
-          expver: "0001"
-  - target: "fileset:cascade_prob_{param}.grib"
-    ensemble:
-      operation: threshold_prob
-      comparison: ">="
-      value: 0.05
-    windows:
-      operation: 'diff'
-      include_start_step: True
-      ranges:
-        - [0, 24, 24]
-        - [12, 36, 24]        
-    grib_set:
-      stepType: accum
-      stepRange: 0-0
-      edition: 2
-      scaleFactorOfLowerLimit: 0
-      probabilityType: 3
-      typeOfGeneratingProcess: 5
-      indicatorOfUnitForTimeIncrement: 1
-      timeIncrement: 12
-      packingType: grid_ccsds
-      scaleFactorOfUpperLimit: MISSING
-      scaledValueOfUpperLimit: MISSING
-      paramId: 131099
-    sources:
-      fdb:
-        fc:
-          class: od
-          stream: enfo
-          type: pf
-          levtype: sfc
-          domain: g
-          param: 228
-          date: 20230914
-          time: 12
-          expver: "0001"
-  - target: "fileset:cascade_prob_{param}.grib"
-    param: 
-      operation: 'norm'
-    windows:
-      ranges:
-        - [12, 24, 12]
-      include_start_step: True
-    grib_set:
-      paramId: 131068
-    ensemble:
-      operation: threshold_prob
-      comparison: ">="
-      value: 10
-    sources:
-      fdb:
-        fc:
-          class: od
-          stream: enfo
-          type: pf
-          levtype: sfc
-          domain: g
-          param: [165, 166]
-          date: 20230914
-          time: 12
-          expver: "0001"
-  - target: "fileset:cascade_prob_{param}.grib"
-    param:
-      operation: 'norm'
-    windows:
-      ranges:
-        - [12, 24, 12]
-      include_start_step: True
-    grib_set:
-      paramId: 131069
-    ensemble:
-      operation: threshold_prob
-      comparison: ">="
-      value: 15
-    sources:
-      fdb:
-        fc:
-          class: od
-          stream: enfo
-          type: pf
-          levtype: sfc
-          domain: g
-          param: [165, 166]
-          date: 20230914
-          time: 12
-          expver: "0001"
-  - target: "fileset:cascade_prob_{param}.grib"
-    steps:
-      - [126, 240, 6]
-    windows:
-      operation: min
-      ranges:
-        - [120, 168]
-        - [120, 240]
-        - [168, 240]
-    grib_set:
-      paramId: 131073
-    ensemble:
-      operation: threshold_prob
-      comparison: "<="
-      value: 273.15
-      local_scale_factor: 2
-    sources:
-      fdb:
-        fc:
-          class: od
-          stream: enfo
-          type: pf
-          levtype: sfc
-          domain: g
-          param: 122
-          date: 20230914
-          time: 12
-          expver: "0001"
-  - target: "fileset:cascade_prob_{param}.grib"
-    steps:
-      - [120, 240, 6]
-    windows:
-      ranges:
-        - [126, 126]
-    grib_set:
-      paramId: 131073
-    ensemble:
-      operation: threshold_prob
-      comparison: "<="
-      value: 273.15
-      local_scale_factor: 2
-    sources:
-      fdb:
-        fc:
-          class: od
-          stream: enfo
-          type: pf
-          levtype: sfc
-          domain: g
-          param: 122
-          date: 20230914
-          time: 12
-          expver: "0001"
+  levtype: sfc
+  domain: g
+  param: "131060"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 0-24
+- class: od
+  stream: enfo
+  type: ep
+  levtype: sfc
+  domain: g
+  param: "131060"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 12-36
+- class: od
+  stream: enfo
+  type: ep
+  levtype: sfc
+  domain: g
+  param: "131061"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 0-24
+- class: od
+  stream: enfo
+  type: ep
+  levtype: sfc
+  domain: g
+  param: "131061"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 12-36
+- class: od
+  stream: enfo
+  type: ep
+  levtype: sfc
+  domain: g
+  param: "131098"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 0-24
+- class: od
+  stream: enfo
+  type: ep
+  levtype: sfc
+  domain: g
+  param: "131098"
+  date: "20230914"
+  time: 12
+  expver: "0001"
+  step: 12-36
+- class: od
+  stream: enfo
+  type: ep
+  levtype: sfc
+  domain: g
+  param: "131068"
+  date: 20230914
+  time: 12
+  expver: "0001"
+  step: 12
+- class: od
+  stream: enfo
+  type: ep
+  levtype: sfc
+  domain: g
+  param: "131068"
+  date: 20230914
+  time: 12
+  expver: "0001"
+  step: 24
+- class: od
+  stream: enfo
+  type: ep
+  levtype: sfc
+  domain: g
+  param: "131069"
+  date: 20230914
+  time: 12
+  expver: "0001"
+  step: 12
+- class: od
+  stream: enfo
+  type: ep
+  levtype: sfc
+  domain: g
+  param: "131069"
+  date: 20230914
+  time: 12
+  expver: "0001"
+  step: 24
+- class: od
+  stream: enfo
+  type: ep
+  levtype: sfc
+  domain: g
+  param: "131073"
+  date: 20230914
+  time: 12
+  expver: "0001"
+  step: 120-168
+- class: od
+  stream: enfo
+  type: ep
+  levtype: sfc
+  domain: g
+  param: "131073"
+  date: 20230914
+  time: 12
+  expver: "0001"
+  step: 120-240
+- class: od
+  stream: enfo
+  type: ep
+  levtype: sfc
+  domain: g
+  param: "131073"
+  date: 20230914
+  time: 12
+  expver: "0001"
+  step: 168-240
+- class: od
+  stream: enfo
+  type: ep
+  levtype: sfc
+  domain: g
+  param: "131073"
+  date: 20230914
+  time: 12
+  expver: "0001"
+  step: 126

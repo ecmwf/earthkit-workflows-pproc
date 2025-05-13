@@ -1,12 +1,11 @@
+from typing import Any
+
 from earthkit.data import FieldList
+from pproc.prob.parallel import threshold_grib_headers
 
-from .window import Range
 
-
-def window(operation: str, range: Range) -> dict:
-    # Note: don't need to step for len(range.steps) == 1, as should already
-    # be correct in template
-    if len(range.steps) == 1:
+def window(operation: str, coords: list[Any], include_init: bool) -> dict:
+    if len(coords) == 1:
         return {}
 
     ret = {}
@@ -14,90 +13,144 @@ def window(operation: str, range: Range) -> dict:
         ret.update({"timeRangeIndicator": 5, "stepType": "diff"})
     if operation == "mean":
         ret["timeRangeIndicator"] = 3
-        ret["numberIncludedInAverage"] = len(range.steps)
+        ret["numberIncludedInAverage"] = (
+            len(coords) if include_init else len(coords) - 1
+        )
         ret["numberMissingFromAveragesOrAccumulations"] = 0
     if operation in ["min", "max"]:
         ret["timeRangeIndicator"] = 2
     ret.setdefault("stepType", "max")
-    ret["stepRange"] = range.name
+    ret["stepRange"] = f"{coords[0]}-{coords[-1]}"
     return ret
 
 
-def extreme(clim: FieldList, ens: FieldList) -> dict:
-    extreme_headers = {}
+def extreme(clim: FieldList, ens: FieldList, metadata: dict) -> dict:
+    edition = metadata.get("edition", ens[0].metadata().get("edition", 1))
+    clim_edition = clim[0].metadata().get("edition", 1)
+    ret = {}
+    if edition == 1 and clim_edition == 1:
+        # set clim keys
+        clim_keys = [
+            "versionNumberOfExperimentalSuite",
+            "implementationDateOfModelCycle",
+            "numberOfReforecastYearsInModelClimate",
+            "numberOfDaysInClimateSamplingWindow",
+            "sampleSizeOfModelClimate",
+            "versionOfModelClimate",
+        ]
+        for key in clim_keys:
+            ret[key] = clim[0].metadata()[key]
 
-    # set clim keys
-    clim_keys = [
-        "powerOfTenUsedToScaleClimateWeight",
-        "weightAppliedToClimateMonth1",
-        "firstMonthUsedToBuildClimateMonth1",
-        "lastMonthUsedToBuildClimateMonth1",
-        "firstMonthUsedToBuildClimateMonth2",
-        "lastMonthUsedToBuildClimateMonth2",
-        "numberOfBitsContainingEachPackedValue",
-    ]
-    for key in clim_keys:
-        extreme_headers[key] = clim.metadata()[0].get(key)
-
-    fc_keys = [
-        "date",
-        "subCentre",
-        "totalNumber",
-    ]
-    for key in fc_keys:
-        extreme_headers[key] = ens.metadata()[0].get(key)
-
-    return extreme_headers
-
-
-def efi(ens: FieldList, clim: FieldList) -> dict:
-    ret = extreme(ens, clim)
-    if len(ens) == 1 and ens.metadata()[0].get("type") == "cf":
-        ret.update({"marsType": "efic", "totalNumber": 1, "number": 0})
+        # set fc keys
+        fc_keys = [
+            "date",
+            "subCentre",
+            "totalNumber",
+        ]
+        for key in fc_keys:
+            ret[key] = ens[0].metadata()[key]
+    elif edition == 2 and clim_edition == 2:
+        clim_keys = [
+            "typeOfReferenceDataset",
+            "yearOfStartOfReferencePeriod",
+            "dayOfStartOfReferencePeriod",
+            "monthOfStartOfReferencePeriod",
+            "hourOfStartOfReferencePeriod",
+            "minuteOfStartOfReferencePeriod",
+            "secondOfStartOfReferencePeriod",
+            "sampleSizeOfReferencePeriod",
+            "numberOfReferencePeriodTimeRanges",
+            "typeOfStatisticalProcessingForTimeRangeForReferencePeriod",
+            "indicatorOfUnitForTimeRangeForReferencePeriod",
+            "lengthOfTimeRangeForReferencePeriod",
+        ]
+        ret.update(
+            {
+                "productDefinitionTemplateNumber": 105,
+                **{key: clim[0].metadata()[key] for key in clim_keys},
+            }
+        )
     else:
-        ret.update({"marsType": "efi", "efiOrder": 0, "number": 0})
+        raise Exception(
+            f"Unsupported GRIB edition {edition} and clim edition {clim_edition}"
+        )
     return ret
 
 
-def sot(ens: FieldList, clim: FieldList, number: int) -> dict:
-    ret = extreme(ens, clim)
+def efi(ens: FieldList, clim: FieldList, metadata: dict) -> dict:
+    ret = extreme(ens, clim, metadata)
+    edition = metadata.get("edition", ens[0].metadata().get("edition", 1))
+    if edition not in [1, 2]:
+        raise Exception(f"Unsupported GRIB edition {edition}")
+
+    if len(ens) == 1 and ens.metadata()[0].get("type") in ["cf", "fc"]:
+        ret["marsType"] = 28
+        if edition == 1:
+            ret["efiOrder"] = 0
+            ret["totalNumber"] = 1
+            ret["number"] = 0
+        else:
+            ret.update(
+                {"typeOfRelationToReferenceDataset": 20, "typeOfProcessedData": 3}
+            )
+    else:
+        ret["marsType"] = 27
+        if edition == 1:
+            ret["efiOrder"] = 0
+            ret["number"] = 0
+        else:
+            ret.update(
+                {"typeOfRelationToReferenceDataset": 20, "typeOfProcessedData": 5}
+            )
+    return ret
+
+
+def sot(ens: FieldList, clim: FieldList, metadata: dict, number: int) -> dict:
+    ret = extreme(ens, clim, metadata)
+    ret["marsType"] = 38
+
     if number == 90:
         efi_order = 99
     elif number == 10:
         efi_order = 1
     else:
         raise Exception(
-            "SOT value '{sot}' not supported in template! Only accepting 10 and 90"
+            f"SOT value '{number}' not supported in template! Only accepting 10 and 90"
         )
-    ret.update(
-        {
-            "marsType": "sot",
-            "efiOrder": efi_order,
-            "number": number,
-        }
-    )
+    edition = metadata.get("edition", ens[0].metadata().get("edition", 1))
+    if edition == 1:
+        ret["number"] = sot
+        ret["efiOrder"] = efi_order
+    elif edition == 2:
+        ret.update(
+            {
+                "typeOfRelationToReferenceDataset": 21,
+                "typeOfProcessedData": 5,
+                "numberOfAdditionalParametersForReferencePeriod": 2,
+                "scaleFactorOfAdditionalParameterForReferencePeriod": [0, 0],
+                "scaledValueOfAdditionalParameterForReferencePeriod": [sot, efi_order],
+            }
+        )
+    else:
+        raise Exception(f"Unsupported GRIB edition {edition}")
     return ret
 
 
 def threshold(
-    comparison: str, threshold: float, local_scale_factor: int | None
+    edition: int, comparison: str, threshold: float, local_scale_factor: int | None
 ) -> dict:
-    """
-    Generated metadata required for computing threshold probabilities. Note,
-    only required for GRIB edition 1 products
-    """
-
-    ret = {}
-    if local_scale_factor is not None:
-        ret["localDecimalScaleFactor"] = local_scale_factor
-        threshold_value = round(threshold * 10**local_scale_factor, 0)
-    else:
-        threshold_value = threshold
-
-    if "<" in comparison:
-        ret.update({"thresholdIndicator": 2, "upperThreshold": threshold_value})
-    elif ">" in comparison:
-        ret.update({"thresholdIndicator": 1, "lowerThreshold": threshold_value})
+    threshold_config = {
+        "value": float(threshold),
+        "comparison": comparison,
+        "out_paramid": 0,
+    }
+    if local_scale_factor:
+        threshold_config["local_scale_factor"] = local_scale_factor
+    ret = threshold_grib_headers(
+        edition,
+        threshold_config,
+    )
+    ret.pop("paramId")
     return ret
 
 
@@ -109,4 +162,22 @@ def anomaly_clim(clim: FieldList) -> dict:
     return {
         key: clim.metadata()[0].get(key)
         for key in ["climateDateFrom", "climateDateTo", "referenceDate"]
+    }
+
+
+def quantiles(
+    ens: FieldList, metadata: dict, pert_number: int, total_number: int
+) -> dict:
+    edition = metadata.get("edition", ens[0].metadata().get("edition", 1))
+    if edition == 1:
+        return {
+            "totalNumber": total_number,
+            "perturbationNumber": pert_number,
+        }
+    return {
+        "productDefinitionTemplateNumber": metadata.get(
+            "productDefinitionTemplateNumber", 86
+        ),
+        "totalNumberOfQuantiles": total_number,
+        "quantileValue": pert_number,
     }
