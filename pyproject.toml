@@ -30,7 +30,7 @@ dependencies = [
     "code-meters",
     "earthkit-workflows @ git+https://github.com/ecmwf/earthkit-workflows",
     "pyfdb",
-    "pproc @ git+ssh://git@github.com/ecmwf/pproc.git@develop"
+    "pproc @ git+https://github.com/ecmwf/pproc@develop"
 ]
 
 
