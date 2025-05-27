@@ -7,12 +7,14 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
+import os
 import pytest
 import xarray as xr
 from earthkit.workflows.fluent import Node, Payload
 
 from earthkit.workflows import Graph, deduplicate_nodes
 from earthkit.workflows.plugins.pproc.fluent import Action
+import tempfile
 
 
 @pytest.mark.parametrize(
@@ -40,6 +42,13 @@ def test_thermal(inputs, nnodes):
     graph = deduplicate_nodes(graph)
     from earthkit.workflows.visualise import visualise
 
-    visualise(graph, "test.html")
+    with tempfile.TemporaryDirectory() as td:
+        # NOTE `visualise` calls some dubious library which always generates javascript
+        # in the current directory, despite the generated html being elsewhere. We chdir
+        # to mitigate the pollution
+        cwd = os.getcwd()
+        os.chdir(td)
+        visualise(graph, "test.html")
+        os.chdir(cwd)
     nodes = list(graph.nodes())
     assert len(nodes) == nnodes
