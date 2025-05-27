@@ -7,17 +7,19 @@
 # nor does it submit to any jurisdiction.
 
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=65", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "earthkit-workflows-pproc"
 description = "An earthkit-workflows interface to PProc"
-license = { text = "Apache License Version 2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [
   { name = "European Centre for Medium-Range Weather Forecasts (ECMWF)", email = "software.support@ecmwf.int" },
 ]
 requires-python = ">=3.10"
+readme = "README.md"
 dynamic = [ "version" ]
 
 dependencies = [
@@ -25,12 +27,11 @@ dependencies = [
     "filelock>=3.12.0",
     "numexpr",
     "dill",
-    "cython",
     "scipy",
     "code-meters",
-    "earthkit-workflows @ git+https://github.com/ecmwf/earthkit-workflows",
+    "earthkit-workflows",
     "pyfdb",
-    "pproc @ git+https://github.com/ecmwf/pproc@develop"
+    "pproc"
 ]
 
 
@@ -46,7 +47,20 @@ include-package-data = true
 zip-safe = false
 
 [tool.setuptools_scm]
-version_file = "src/earthkit/workflows/plugins/pproc/_version.py"
+write_to = "src/earthkit/workflows/plugins/pproc/_version.py"
+write_to_template = '''# Do not change! Do not track in version control!
+__version__ = "{version}"
+'''
+local_scheme = "no-local-version"
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "DEBUG"
+testpaths = ["tests/"]
+addopts = "-n8"
 
 [tool.isort]
 profile = "black"
+
+[tool.ruff.lint]
+ignore = ["E722", "E731", "E741"]

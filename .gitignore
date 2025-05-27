@@ -7,3 +7,5 @@
 *.prof
 *.idx
 .mypy_cache
+
+dist/*
