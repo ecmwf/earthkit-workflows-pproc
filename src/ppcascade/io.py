@@ -6,6 +6,7 @@ from os.path import join as pjoin
 import shutil
 import sys
 import time
+from typing import Optional
 
 import mir
 from pproc.common.io import (

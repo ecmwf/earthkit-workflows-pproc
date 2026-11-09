@@ -5,7 +5,7 @@ from pproc.common.config import default_parser
 def basic_parser(description: str, clim: bool = False, det: bool = False):
     parser = default_parser(description)
     parser.add_argument("-e", "--ensemble", required=True, help="Ensemble data (GRIB)")
-    parser.add_argument("-r", "--read-retries", default=1, help="Number of times to retry reads")
+    parser.add_argument("-r", "--read-retries", default=1, type=int, help="Number of times to retry reads")
     if clim:
         parser.add_argument(
             "--climatology", required=True, help="Climatology data (GRIB)"
