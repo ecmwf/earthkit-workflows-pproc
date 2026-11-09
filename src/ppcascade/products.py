@@ -63,12 +63,15 @@ def anomaly_prob(args):
         param_config = ParamConfig(config.members, cfg, config.in_keys, config.out_keys)
         for window in param_config.windows:
             climatology = _read(
-                param_config.clim_request(window, args.climatology)
+                param_config.clim_request(window, args.climatology), 
+                retries=config.read_retries,
             )  # Will contain type em and es
 
             total_graph += (
-                _read(param_config.forecast_request(window, args.ensemble))
-                .anomaly(climatology, window)
+                _read(
+                    param_config.forecast_request(window, args.ensemble),
+                    retries=config.read_retries,
+                ).anomaly(climatology, window)
                 .window_operation(
                     window,
                     param_config.get_target("out_ensemble"),
@@ -92,8 +95,10 @@ def prob(args):
         param_config = ParamConfig(config.members, cfg, config.in_keys, config.out_keys)
         for window in param_config.windows:
             total_graph += (
-                _read(param_config.forecast_request(window, args.ensemble))
-                .param_operation(param_config.param_operation)
+                _read(
+                    param_config.forecast_request(window, args.ensemble), 
+                    retries=config.read_retries,
+                ).param_operation(param_config.param_operation)
                 .window_operation(
                     window,
                     param_config.get_target("out_ensemble"),
@@ -126,6 +131,7 @@ def wind(args):
                 ws = _read(
                     requests,
                     stream=(not vod2uv),
+                    retries=config.read_retries,
                 ).wind_speed(
                     vod2uv,
                     param_config.get_target(target),
@@ -149,8 +155,10 @@ def ensms(args):
         param_config = ParamConfig(config.members, cfg, config.in_keys, config.out_keys)
         for window in param_config.windows:
             total_graph += (
-                _read(param_config.forecast_request(window, args.ensemble))
-                .window_operation(window)
+                _read(
+                    param_config.forecast_request(window, args.ensemble), 
+                    retries=config.read_retries,
+                ).window_operation(window)
                 .ensms(
                     param_config.get_target("out_mean"),
                     param_config.get_target("out_std"),
@@ -172,10 +180,12 @@ def extreme(args):
             climatology = _read(
                 param_config.clim_request(
                     window, args.climatology, True, no_expand=("quantile")
-                )
+                ), 
+                retries=config.read_retries,
             )
             parameter = _read(
-                param_config.forecast_request(window, args.ensemble)
+                param_config.forecast_request(window, args.ensemble), 
+                retries=config.read_retries,
             ).param_operation(param_config.param_operation)
             eps = float(param_config.options["eps"])
             grib_sets = {**param_config.out_keys, **window.grib_set}
@@ -219,8 +229,11 @@ def quantiles(args):
         param_config = ParamConfig(config.members, cfg, config.in_keys, config.out_keys)
         for window in param_config.windows:
             total_graph += (
-                _read(param_config.forecast_request(window, args.ensemble), "number")
-                .param_operation(param_config.param_operation)
+                _read(
+                    param_config.forecast_request(window, args.ensemble), 
+                    "number", 
+                    retries=config.read_retries,
+                ).param_operation(param_config.param_operation)
                 .window_operation(window)
                 .quantiles(
                     param_config.options["num_quantiles"],
@@ -235,16 +248,22 @@ def quantiles(args):
 def clustereps(args):
     config = ClusterConfig(args)
     if args.spread is not None:
-        spread = _read(config.spread_request(args.spread, no_expand=("step",)))
+        spread = _read(
+            config.spread_request(args.spread, no_expand=("step",)), 
+            retries=config.read_retries,
+        )
     else:
         spread = _read(
             config.spread_compute_request(args.spread_compute, no_expand=("step",)),
             join_key="date",
+            retries=config.read_retries,
         ).mean(key="date")
 
     pca = (
-        _read(config.forecast_request(args.ensemble, no_expand="step"))
-        .concatenate(key="number")
+        _read(
+            config.forecast_request(args.ensemble, no_expand="step"), 
+            retries=config.read_retries,
+        ).concatenate(key="number")
         .join(spread, dim_name="data_type")
         .pca(config, args.mask, args.pca)
     )

@@ -5,6 +5,7 @@ import importlib
 from os.path import join as pjoin
 import shutil
 import sys
+import time
 
 import mir
 from pproc.common.io import (
@@ -115,29 +116,34 @@ def file_retrieve(path: str, request: dict) -> Source:
     return ds
 
 
-def retrieve(request: dict | list[dict], **kwargs):
+def retrieve(request: dict | list[dict], retries: int = 1, **kwargs):
     if isinstance(request, dict):
         func = retrieve_single_source
     else:
         func = retrieve_multi_sources
+
+    attempt = 1
     meter, result = metered(f"RETRIEVE {request}", None, True)(func)(request, **kwargs)
+    while result is None and attempt < retries:
+        time.sleep(30)
+        meter, result = metered(f"RETRIEVE {request}", None, True)(func)(request, **kwargs)
+        attempt += 1
+    if result is None:
+       raise ValueError(f"No data retrieved from {source} for request {request}")
     print(f"{str(meter)}, size: {pretty_bytes(result.values.nbytes)}")
     return result
 
 
-def retrieve_multi_sources(requests: list[dict], **kwargs) -> NumpyFieldList:
+def retrieve_multi_sources(requests: list[dict], **kwargs) -> Optional[NumpyFieldList]:
     ret = None
     for req in requests:
-        try:
-            ret = retrieve_single_source(req, **kwargs)
+        ret = retrieve_single_source(req, **kwargs)
+        if ret is not None:
             break
-        except AssertionError:
-            continue
-    assert ret is not None, f"No data retrieved from requests: {requests}"
     return ret
 
 
-def retrieve_single_source(request: dict, **kwargs) -> NumpyFieldList:
+def retrieve_single_source(request: dict, **kwargs) -> Optional[NumpyFieldList]:
     xp = importlib.import_module(os.getenv("CASCADE_ARRAY_MODULE", "numpy"))
 
     req = request.copy()
@@ -151,9 +157,8 @@ def retrieve_single_source(request: dict, **kwargs) -> NumpyFieldList:
         ret_sources = file_retrieve(path, req)
     else:
         raise NotImplementedError("Source {source} not supported.")
-    assert (
-        len(ret_sources) > 0
-    ), f"No data retrieved from {source} for request {request}"
+    if len(ret_sources) == 0:
+        return None
     ret = FieldList.from_numpy(
         xp.asarray(ret_sources.values),
         list(map(GribBufferMetaData, ret_sources.metadata())),

@@ -157,6 +157,7 @@ class Config(BaseConfig):
             self.members = range(1, int(self.options["members"]) + 1)
         self.out_keys = self.options.pop("out_keys", {})
         self.in_keys = self.options.pop("in_keys", {})
+        self.read_retries = self.options.pop("read_retries", 1)
 
 
 class ParamConfig:
